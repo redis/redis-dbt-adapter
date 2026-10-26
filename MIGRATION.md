@@ -7,6 +7,7 @@ Migrated on October 26, 2026 from [alberttwong/redis-dbt-adapter-with-project](h
 - Copies record original authors and timestamps in their bodies; GitHub assigns new numbers, creation dates, and migration-account authorship.
 - The 52 historical pull requests and original Actions run logs remain at the source. Their commits are included in Git history.
 - Both workflow definitions are included. Driver downloads and source builds use the public `redis/redis-adbc-driver` repository; workflows use the built-in `github.token` and need no separate driver secret.
+- The v2 workflow now pins driver `v0.0.18`, available in the public driver repository; historical v2 validation reports retain their original `v0.0.16` version.
 - Historical driver issue and pull request links continue to point to the original records.
 
 ## Issue mapping

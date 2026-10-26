@@ -148,7 +148,7 @@ RUST_LOG=trace python3 v2/taxi.py --dbt /absolute/path/to/dbt-v2 \
   --csv "$PWD/v1/data/yellow_tripdata_2019-01.csv.gz"
 ```
 
-Use Redis ADBC v0.0.16 for the parity implementation, including enforced primary
+Use Redis ADBC v0.0.18 from `redis/redis-adbc-driver` for the parity implementation, including enforced primary
 key, unique, and foreign key constraints. Build the engine with its default
 features (`cargo build -p dbt-sa-cli`) so docs generation has the embedded UI.
 For a JSON warehouse catalog, request `dbt build --write-catalog`; v2's docs

@@ -6,6 +6,6 @@
   "implementation_branch": "codex/redis-feature-parity",
   "implementation_commit": "90178580bd6f3353d758fff770fdc2c58c985ad0",
   "connection_pull_request": "https://github.com/alberttwong/dbt/pull/1",
-  "driver_version": "v0.0.16",
+  "driver_version": "v0.0.18",
   "implementation_pull_request": "https://github.com/alberttwong/dbt/pull/3"
 }
