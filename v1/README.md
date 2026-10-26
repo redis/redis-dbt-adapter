@@ -5,10 +5,10 @@
 Run the commands in this guide from `v1/` (`cd v1` from the repository root).
 The [repository overview](../README.md) describes the v1/v2 layout.
 
-[![CI](https://github.com/alberttwong/redis-dbt-adapter-with-project/actions/workflows/ci.yml/badge.svg)](https://github.com/alberttwong/redis-dbt-adapter-with-project/actions/workflows/ci.yml)
+[![CI](https://github.com/redis/redis-dbt-adapter/actions/workflows/ci.yml/badge.svg)](https://github.com/redis/redis-dbt-adapter/actions/workflows/ci.yml)
 
 A dbt Core project that tests the dbt Redis adapter, which is built on the
-[Redis ADBC driver](https://github.com/alberttwong/redis-adbc-driver). It does
+[Redis ADBC driver](https://github.com/redis/redis-adbc-driver). It does
 three things:
 
 - loads the NYC TLC yellow-taxi trips CSV into Redis,
@@ -46,9 +46,9 @@ You need Docker, [uv](https://docs.astral.sh/uv/) (it provides Python
 3.13 for dbt), and network access to hub.getdbt.com for `dbt deps`.
 Building the driver from source also needs Go 1.26.6 or newer and a C
 toolchain; on macOS arm64 and Linux (x86-64, arm64) the prebuilt one is used.
-The driver's repo, [alberttwong/redis-adbc-driver](https://github.com/alberttwong/redis-adbc-driver),
-is private: you need read access to it, and the [GitHub CLI](https://cli.github.com/)
-logged in (`gh auth login`) to download its releases.
+The driver's repo, [redis/redis-adbc-driver](https://github.com/redis/redis-adbc-driver),
+is public. Releases download through the [GitHub CLI](https://cli.github.com/)
+when logged in, or through HTTPS without authentication.
 
 ### Set up the environment
 
@@ -165,10 +165,9 @@ constrains certifi to 2026.10.19 or newer to address GHSA-6q48-6c7w-9gw2. See
 [dependency upgrade notes](DEPENDENCIES.md) for upstream constraints that prevent
 some transitive dependencies from reaching their latest release.
 
-The driver's repo is private, so CI reads it with the `DRIVER_REPO_TOKEN`
-secret: a fine-grained token with read-only Contents access to
-alberttwong/redis-adbc-driver alone. It downloads the release and, when CI
-builds the driver from source, clones the repo.
+CI downloads releases from the public `redis/redis-adbc-driver` repository
+using the built-in `github.token` for GitHub API requests. Source builds clone
+the public repository. No separate driver repository secret is required.
 
 ### dbt's adapter test suite
 
@@ -311,7 +310,7 @@ extension, the adapter adds `.dylib`, `.so` or `.dll`), `uri`, `username`,
   timeout (5 minutes by default). Raise `read_timeout` on a cluster or a
   busy server.
 - `driver_options`: any other
-  [driver option](https://github.com/alberttwong/redis-adbc-driver#options),
+  [driver option](https://github.com/redis/redis-adbc-driver#options),
   passed as is, for example `{adbc.redis.stream_batch_rows: 10000}`. The
   driver refuses an unknown one when dbt connects. Options that have a
   profile key of their own (`adbc.redis.time_zone`, `password`, …) must be
@@ -325,7 +324,7 @@ ignored with a warning.
 ### Driver issues found along the way
 
 Building this project turned up these issues, all filed on
-[alberttwong/redis-adbc-driver](https://github.com/alberttwong/redis-adbc-driver/issues).
+[redis/redis-adbc-driver](https://github.com/redis/redis-adbc-driver/issues).
 All of them are fixed in the pinned driver, v0.0.18.
 
 | Issue | Fixed in |
@@ -424,7 +423,7 @@ the dbt features above all work. These limits come from the design:
 dbt can run as a Redis ACL user (`username` / `password` in `profiles.yml`).
 The commands and key patterns the driver needs, per feature, and a read-only
 user recipe are in the
-[driver's README](https://github.com/alberttwong/redis-adbc-driver#server-requirements).
+[driver's README](https://github.com/redis/redis-adbc-driver#server-requirements).
 A read-only user can run `dbt show`, the data tests
 and `docs generate`. Unit tests and snapshots create temporary tables, which
 need `INCRBY` on the driver's metadata keys, so they fail for a read-only

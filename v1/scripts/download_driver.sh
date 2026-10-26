@@ -2,10 +2,9 @@
 # Download the prebuilt Redis ADBC driver from its GitHub release into
 # ./driver/, after checking the release's SHA-256.
 #
-# The driver's repo is private, so this downloads with gh when gh is logged
-# in (gh auth login, or GH_TOKEN as in CI) with read access to it. Otherwise
-# it uses curl, which works only while the repo is public, or with
-# DRIVER_RELEASES set to a mirror.
+# The driver's repo is public. Download with gh when it is authenticated
+# (gh auth login, or GH_TOKEN as in CI); otherwise use curl over HTTPS.
+# DRIVER_RELEASES can point to a release mirror.
 #
 # Releases have builds for macOS arm64, Linux x86-64 and Linux arm64. When
 # there's none for this platform or version (another OS, or DRIVER_VERSION set
@@ -14,7 +13,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-DRIVER_GH_REPO="${DRIVER_GH_REPO:-alberttwong/redis-adbc-driver}"
+DRIVER_GH_REPO="${DRIVER_GH_REPO:-redis/redis-adbc-driver}"
 DRIVER_RELEASES="${DRIVER_RELEASES:-}"
 DRIVER_VERSION="${DRIVER_VERSION:-$(cat "${ROOT}/scripts/driver-version")}"
 

@@ -80,7 +80,7 @@ jobs:
 
       - name: Download pinned Redis ADBC driver
         env:
-          GH_TOKEN: ${{ secrets.DRIVER_REPO_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           DRIVER_VERSION: ${{ steps.sources.outputs.driver_version }}
         run: bash v1/scripts/download_driver.sh
 

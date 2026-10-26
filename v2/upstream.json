@@ -2,7 +2,7 @@
   "upstream": "https://github.com/dbt-labs/dbt",
   "fork": "https://github.com/alberttwong/dbt",
   "baseline_commit": "4bb4caa4ae1e7f4354c7817093a55514c6cbea41",
-  "tracking_issue": "https://github.com/alberttwong/redis-dbt-adapter-with-project/issues/69",
+  "tracking_issue": "https://github.com/redis/redis-dbt-adapter/issues/27",
   "implementation_branch": "codex/redis-feature-parity",
   "implementation_commit": "90178580bd6f3353d758fff770fdc2c58c985ad0",
   "connection_pull_request": "https://github.com/alberttwong/dbt/pull/1",

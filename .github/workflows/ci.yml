@@ -109,10 +109,10 @@ jobs:
       - name: Choose the latest driver release
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         env:
-          GH_TOKEN: ${{ secrets.DRIVER_REPO_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           REQUESTED: ${{ inputs.driver_version }}
         run: |
-          version="${REQUESTED:-$(gh release view --repo alberttwong/redis-adbc-driver --json tagName --jq .tagName)}"
+          version="${REQUESTED:-$(gh release view --repo redis/redis-adbc-driver --json tagName --jq .tagName)}"
           echo "DRIVER_VERSION=${version}" >> "$GITHUB_ENV"
 
       # A commit has no prebuilt driver: make driver builds it from source.
@@ -121,12 +121,11 @@ jobs:
         with:
           go-version: "1.26"
 
-      # The driver's repo is private. DRIVER_REPO_TOKEN can read it: gh
-      # downloads the release with it, and git clones with it when make driver
-      # builds from source.
+      # The public driver repository uses the workflow token for release API
+      # requests; source builds clone the public repository.
       - name: Download the driver
         env:
-          GH_TOKEN: ${{ secrets.DRIVER_REPO_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           gh auth setup-git
           make driver
@@ -209,10 +208,10 @@ jobs:
       - name: Choose the latest driver release
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         env:
-          GH_TOKEN: ${{ secrets.DRIVER_REPO_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           REQUESTED: ${{ inputs.driver_version }}
         run: |
-          version="${REQUESTED:-$(gh release view --repo alberttwong/redis-adbc-driver --json tagName --jq .tagName)}"
+          version="${REQUESTED:-$(gh release view --repo redis/redis-adbc-driver --json tagName --jq .tagName)}"
           echo "DRIVER_VERSION=${version}" >> "$GITHUB_ENV"
 
       - uses: actions/setup-go@v7
@@ -220,12 +219,11 @@ jobs:
         with:
           go-version: "1.26"
 
-      # The driver's repo is private. DRIVER_REPO_TOKEN can read it: gh
-      # downloads the release with it, and git clones with it when make driver
-      # builds from source.
+      # The public driver repository uses the workflow token for release API
+      # requests; source builds clone the public repository.
       - name: Download the driver
         env:
-          GH_TOKEN: ${{ secrets.DRIVER_REPO_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           gh auth setup-git
           make driver

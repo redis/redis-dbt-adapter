@@ -46,7 +46,7 @@ before making engine changes. Its architecture has evolved from some paths in
 the public adapter guide; use the pinned source as the implementation reference.
 
 The integration work is tracked in
-[issue #69](https://github.com/alberttwong/redis-dbt-adapter-with-project/issues/69).
+[issue #27](https://github.com/redis/redis-dbt-adapter/issues/27).
 This directory replaces the need for a separate `redis-dbt-v2-adapter` integration
 repository. That repository remains empty.
 

@@ -1,6 +1,6 @@
 # Dependency upgrade notes
 
-The October 22, 2026 refresh for [issue #78](https://github.com/alberttwong/redis-dbt-adapter-with-project/issues/78)
+The October 22, 2026 refresh for [issue #29](https://github.com/redis/redis-dbt-adapter/issues/29)
 uses PyArrow 26.0.0 in both Python runtimes and Polars 2.0.0 in the adapter test
 suite. Python 3.13 is now the minimum supported version. The example uses
 Python 3.13 (`>=3.13,<3.14`); the adapter package requires Python 3.13 or later.

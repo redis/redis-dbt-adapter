@@ -46,4 +46,4 @@ support remains experimental in the custom engine.
 This repository's [`v2/`](v2/README.md) directory contains integration fixtures,
 configuration examples, and test runners. The Rust adapter implementation lives
 in the engine fork. Development history is tracked in
-[issue #69](https://github.com/alberttwong/redis-dbt-adapter-with-project/issues/69).
+[issue #27](https://github.com/redis/redis-dbt-adapter/issues/27).
