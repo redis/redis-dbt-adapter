@@ -112,7 +112,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REQUESTED: ${{ inputs.driver_version }}
         run: |
-          version="${REQUESTED:-$(gh release view --repo redis/redis-adbc-driver --json tagName --jq .tagName)}"
+          # Use REST for public cross-repository reads with the workflow token.
+          version="${REQUESTED:-$(gh api repos/redis/redis-adbc-driver/releases/latest --jq .tag_name)}"
           echo "DRIVER_VERSION=${version}" >> "$GITHUB_ENV"
 
       # A commit has no prebuilt driver: make driver builds it from source.
@@ -211,7 +212,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REQUESTED: ${{ inputs.driver_version }}
         run: |
-          version="${REQUESTED:-$(gh release view --repo redis/redis-adbc-driver --json tagName --jq .tagName)}"
+          # Use REST for public cross-repository reads with the workflow token.
+          version="${REQUESTED:-$(gh api repos/redis/redis-adbc-driver/releases/latest --jq .tag_name)}"
           echo "DRIVER_VERSION=${version}" >> "$GITHUB_ENV"
 
       - uses: actions/setup-go@v7
