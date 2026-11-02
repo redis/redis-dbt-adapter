@@ -189,7 +189,19 @@ def verify(credentials, api):
     print('Verified rejection of plaintext, untrusted CA, missing auth, and incorrect password.')
 
 
-def up():
+def write_environment(exports, github_env=False):
+    if any('\n' in value or '\r' in value for value in exports.values()):
+        raise ValueError('Connection environment values must be single-line')
+    (STATE / 'env.sh').write_text(''.join(
+        f'export {key}={shlex.quote(value)}\n' for key, value in exports.items()))
+    if github_env:
+        print('::add-mask::' + exports['REDIS_PASSWORD'], flush=True)
+        with open(os.environ['GITHUB_ENV'], 'a') as output:
+            for key, value in exports.items():
+                print(f'{key}={value}', file=output)
+
+
+def up(github_env=False):
     os.umask(0o077)
     STATE.mkdir(mode=0o700, exist_ok=True)
     credential_file = STATE / 'credentials.json'
@@ -260,23 +272,26 @@ def up():
          .get('search', {}).get('search-workers') == 6, 'effective QPF 4x workers')
     exports = {'REDIS_URI': f'rediss://localhost:{DB_PORT}/0',
                'REDIS_USERNAME': credentials['username'], 'REDIS_PASSWORD': credentials['password'],
-               'SSL_CERT_FILE': str(STATE / 'ca.crt'),
                'REDIS_TLS_CA_FILE': str(STATE / 'ca.crt')}
     extension = '.dylib' if sys.platform == 'darwin' else '.so'
     driver = ROOT / 'v1' / 'driver' / ('libadbc_driver_redis' + extension)
     exports['REDIS_ADBC_DRIVER'] = str(driver)
-    (STATE / 'env.sh').write_text(''.join(f'export {key}={shlex.quote(value)}\n' for key, value in exports.items()))
     verify(credentials, api)
+    write_environment(exports, github_env)
     print('Connection environment: source ' + str(STATE / 'env.sh'))
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=['up', 'verify'])
+    parser.add_argument('--github-env', action='store_true',
+                        help='Mask generated credentials and export verified settings to GITHUB_ENV')
     args = parser.parse_args()
+    if args.github_env and (args.action != 'up' or not os.environ.get('GITHUB_ENV')):
+        parser.error('--github-env requires up and the GITHUB_ENV environment variable')
     try:
         if args.action == 'up':
-            up()
+            up(args.github_env)
         else:
             credentials = json.loads((STATE / 'credentials.json').read_text())
             verify(credentials, API(credentials))

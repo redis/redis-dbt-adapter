@@ -170,9 +170,9 @@ All live integration checks require a Redis Enterprise cluster with TLS,
 `REDIS_USERNAME`, and `REDIS_PASSWORD`. The runners reject plaintext URIs,
 missing credentials, and `skip_verify` bypasses before invoking dbt. Certificates must be trusted. For a private CA, set `REDIS_TLS_CA_FILE`
 to its PEM bundle; the profiles pass it as `adbc.redis.tls_ca_file`. This
-works with the native macOS verifier as well as Linux. The native workflow uses repository secrets `REDIS_URI`,
-`REDIS_USERNAME`, and `REDIS_PASSWORD` for every live scenario, including
-credential precedence. Provision a dedicated Enterprise test database with the
-Query Engine enabled and an endpoint reachable from the CI runner. The scripts
-validate connection settings; the operator is responsible for provisioning the
-Enterprise cluster. Parse-only checks and mocked unit tests need no database.
+works with the native macOS verifier as well as Linux. The native workflow provisions a dedicated three-shard Enterprise cluster
+with TLS and a named user on its runner, then exports verified connection
+settings with the generated password masked. No database secrets are required.
+For external test endpoints, provision an Enterprise database with Search; the
+scripts validate connection settings, while the operator provisions the cluster.
+Parse-only checks and mocked unit tests need no database.

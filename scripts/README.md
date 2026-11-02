@@ -33,8 +33,7 @@ git-ignored `.redis-enterprise/` directory. Do not commit or share `env.sh` or
 The generated CA signs localhost certificates valid for 30 days. `env.sh` sets
 `REDIS_TLS_CA_FILE`, which the profiles pass as `adbc.redis.tls_ca_file`, so
 the ADBC driver trusts that CA on macOS and Linux without a TLS verification
-bypass or a global trust-store change. `SSL_CERT_FILE` is also set for other
-tools that honor it. It also sets `REDIS_URI`,
+bypass or a global trust-store change. It also sets `REDIS_URI`,
 `REDIS_USERNAME`, `REDIS_PASSWORD`, and the absolute pinned driver path.
 Only the initial owned loopback management bootstrap uses the container's
 unverified self-signed certificate; subsequent API and data connections verify
@@ -57,6 +56,8 @@ To reset the fixture, including expired certificates, first remove its owned
 container (`docker rm -f redis-dbt-enterprise`), then remove `.redis-enterprise/`
 and rerun `up`. This deletes the fixture's test data and generated credentials.
 
-CI uses a separately provisioned, reachable Enterprise cluster through the
-`REDIS_URI`, `REDIS_USERNAME`, and `REDIS_PASSWORD` repository secrets. The local
-loopback endpoint is intended for local test runs.
+CI provisions the same Enterprise fixture separately on every integration
+runner, including each matrix entry. `up --github-env` masks the generated
+password and exports the verified URI, username, password, CA path, and driver
+path through `GITHUB_ENV`. No preconfigured database secrets or external test
+cluster are required. The native v2 workflow uses the same setup.

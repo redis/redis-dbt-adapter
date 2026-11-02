@@ -151,12 +151,11 @@ data, which staging filters out.
 
 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs on every pull
 request and push to `main`, against a Redis Enterprise test cluster and the
-pinned driver. Configure repository secrets `REDIS_URI`, `REDIS_USERNAME`, and
-`REDIS_PASSWORD` for a TLS endpoint reachable from GitHub-hosted runners. The
-cluster must have the Query Engine enabled and a trusted server certificate.
-Missing secrets fail the live jobs; fork PRs without secrets can still run the
-database-free checks. The fixed-schema taxi matrix and CI workflow runs are
-serialized to prevent collisions on the shared database. CI runs:
+pinned driver. Each integration job provisions its own three-shard Enterprise
+cluster with Search, TLS, a generated private CA, and a named database user.
+The setup masks the generated password and exports the connection settings
+through `GITHUB_ENV`; no preconfigured database secrets are needed. Jobs run
+against isolated databases, including each taxi dependency matrix entry. CI runs:
 
 - `make all`, failing on any error and unless the build gives exactly
   `PASS=82 WARN=1`

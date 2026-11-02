@@ -20,8 +20,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: redis-enterprise-integration-${{ github.workflow }}
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   dependency-audit:
@@ -68,9 +68,6 @@ jobs:
       # Without the dev group (dbt-tests-adapter, pytest), which needs a newer
       # dbt-common than the oldest dbt-core allows.
       UV_NO_DEV: "1"
-      REDIS_URI: ${{ secrets.REDIS_URI }}
-      REDIS_USERNAME: ${{ secrets.REDIS_USERNAME }}
-      REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
     strategy:
       fail-fast: false
       matrix:
@@ -78,10 +75,11 @@ jobs:
         # locked: uv.lock. oldest: the lowest versions the pyproject.toml
         # files allow (the project's dbt-core, the adapter's other floors).
         versions: [locked, oldest]
-      # The taxi project uses fixed schema names on the shared test cluster.
-      max-parallel: 1
     steps:
       - uses: actions/checkout@v7
+
+      - name: Provision Redis Enterprise with TLS and a named user
+        run: python3 ../scripts/redis_enterprise.py up --github-env
 
       - name: Require authenticated Redis Enterprise over TLS
         run: python3 ../scripts/integration_config.py
@@ -174,10 +172,6 @@ jobs:
   # needs newer dbt packages than the oldest ones.
   adapter-tests:
     name: adapter tests (Python ${{ matrix.python }})
-    env:
-      REDIS_URI: ${{ secrets.REDIS_URI }}
-      REDIS_USERNAME: ${{ secrets.REDIS_USERNAME }}
-      REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -189,6 +183,9 @@ jobs:
         python: ["3.13"]
     steps:
       - uses: actions/checkout@v7
+
+      - name: Provision Redis Enterprise with TLS and a named user
+        run: python3 ../scripts/redis_enterprise.py up --github-env
 
       - name: Require authenticated Redis Enterprise over TLS
         run: python3 ../scripts/integration_config.py
