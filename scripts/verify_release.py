@@ -1,17 +1,40 @@
 """Check release checksums and package identity before granting a publishing token."""
+import argparse
+import ast
 import email
 import hashlib
+import json
 from pathlib import Path
 import re
-import sys
 import tarfile
+import time
+import tomllib
+import urllib.error
+import urllib.request
 import zipfile
 
 
-def verify(tag, directory):
+def release_version(tag):
     if not re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+', tag):
         raise ValueError('Expected a stable release tag such as v0.2.0')
-    version = tag[1:]
+    return tag[1:]
+
+
+def verify_source(tag, directory):
+    version = release_version(tag)
+    project = tomllib.loads((directory / 'pyproject.toml').read_text())['project']
+    runtime = ast.parse((directory / 'dbt/adapters/redis_adbc/__version__.py').read_text())
+    versions = [ast.literal_eval(node.value) for node in runtime.body
+                if isinstance(node, ast.Assign)
+                and any(isinstance(target, ast.Name) and target.id == 'version'
+                        for target in node.targets)]
+    if project['name'] != 'dbt-redis-adbc' or project['version'] != version or versions != [version]:
+        raise ValueError('Tagged package and adapter runtime versions must match the tag')
+    print(f'Verified tagged source version {version}')
+
+
+def verify(tag, directory):
+    version = release_version(tag)
     stem = f'dbt_redis_adbc-{version}'
     wheel = f'{stem}-py3-none-any.whl'
     source = f'{stem}.tar.gz'
@@ -41,7 +64,45 @@ def verify(tag, directory):
         if package['Name'] != 'dbt-redis-adbc' or package['Version'] != version:
             raise ValueError('Package identity does not match the release tag')
     print(f'Verified dbt-redis-adbc {version}: wheel, sdist, and SHA-256 checksums')
+    return checksums
+
+
+def verify_pypi(tag, checksums):
+    version = release_version(tag)
+    url = f'https://pypi.org/pypi/dbt-redis-adbc/{version}/json'
+    for attempt in range(10):
+        try:
+            with urllib.request.urlopen(url, timeout=15) as response:
+                release = json.load(response)
+            break
+        except urllib.error.HTTPError as error:
+            if error.code not in {404, 502, 503, 504} or attempt == 9:
+                raise
+        except urllib.error.URLError:
+            if attempt == 9:
+                raise
+        time.sleep(3)
+    actual = {artifact['filename']: artifact['digests']['sha256']
+              for artifact in release['urls']}
+    if release['info']['version'] != version or actual != checksums:
+        raise ValueError('PyPI distributions do not match the tested release artifacts')
+    print(f'Verified PyPI version {version} and both distribution checksums')
 
 
 if __name__ == '__main__':
-    verify(sys.argv[1], Path(sys.argv[2]))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('tag')
+    parser.add_argument('directory', type=Path, nargs='?')
+    parser.add_argument('--source', type=Path, help='Check tagged source versions before building')
+    parser.add_argument('--pypi', action='store_true', help='Also verify published PyPI hashes')
+    args = parser.parse_args()
+    if args.source:
+        if args.directory or args.pypi:
+            parser.error('--source cannot be combined with distributions or --pypi')
+        verify_source(args.tag, args.source)
+    elif args.directory:
+        checksums = verify(args.tag, args.directory)
+        if args.pypi:
+            verify_pypi(args.tag, checksums)
+    else:
+        parser.error('Supply a distribution directory or --source')
