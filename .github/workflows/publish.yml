@@ -59,7 +59,10 @@ jobs:
         with:
           python-version: "3.13"
       - name: Build wheel and source archive once
-        run: uv build --python 3.13 source/v1/adapter --out-dir dist
+        run: |
+          uv build --python 3.13 source/v1/adapter --out-dir dist
+          # uv creates this convenience file alongside the distributions.
+          rm -f dist/.gitignore
       - name: Verify distributions and metadata
         run: |
           (cd dist && sha256sum *.whl *.tar.gz > SHA256SUMS)
