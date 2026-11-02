@@ -5,6 +5,9 @@
 Run the commands in this guide from `v1/` (`cd v1` from the repository root).
 The [repository overview](../README.md) describes the v1/v2 layout.
 
+To install the published adapter in your own project, start with the
+[installation and first-model guide](../docs/INSTALLATION.md).
+
 [![CI](https://github.com/redis/redis-dbt-adapter/actions/workflows/ci.yml/badge.svg)](https://github.com/redis/redis-dbt-adapter/actions/workflows/ci.yml)
 
 A dbt Core project that tests the dbt Redis adapter, which is built on the

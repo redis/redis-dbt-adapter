@@ -23,7 +23,9 @@ publication. No long-lived PyPI token is required.
 ## Prepare a release
 
 1. Update `v1/adapter/pyproject.toml`, the adapter's `__version__.py`, and the
-   adapter version in `v1/uv.lock`. Merge the change after CI passes.
+   adapter version in `v1/uv.lock`. Refresh the tested installation versions in
+   `README.md`, `docs/INSTALLATION.md`, and `v1/adapter/README.md` as appropriate.
+   Merge the change after CI passes.
 2. Create a stable tag such as `v0.3.0` on that exact commit and push the tag.
 3. Watch **Actions → Publish to PyPI**. Tag pushes automatically build, test,
    publish to PyPI, verify published hashes, and finalize the GitHub release.
