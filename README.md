@@ -55,3 +55,8 @@ This repository's [`v2/`](v2/README.md) directory contains integration fixtures,
 configuration examples, and test runners. The Rust adapter implementation lives
 in the engine fork. Development history is tracked in
 [issue #27](https://github.com/redis/redis-dbt-adapter/issues/27).
+
+## Publishing releases
+
+See the [release guide](scripts/RELEASING.md) for PyPI trusted publishing setup
+and publishing an existing GitHub release.
