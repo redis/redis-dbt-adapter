@@ -4,6 +4,10 @@ A dbt Core adapter for Redis 8.x, built on the
 [Redis ADBC driver](https://github.com/redis/redis-adbc-driver).
 Compatible with dbt Core 1.10 and later 1.x releases.
 
+**[Complete installation and first-model guide](https://github.com/redis/redis-dbt-adapter/blob/main/docs/INSTALLATION.md)**
+covers Python installation, native driver download and checksum verification,
+TLS configuration, a dbt profile, and your first model.
+
 ## Install
 
 Requires Python 3.13 or later (PyArrow 26+) and Redis 8.x with the Query Engine (Search)
@@ -11,7 +15,7 @@ enabled. Integration tests require a Redis Enterprise cluster with TLS and
 username/password authentication.
 
 ```shell
-python -m pip install dbt-redis-adbc
+python -m pip install dbt-redis-adbc==0.2.0
 ```
 
 The Python package does not include the native Redis ADBC driver. Download and
@@ -39,13 +43,16 @@ redis_project:
       uri: "{{ env_var('REDIS_URI') }}"
       username: "{{ env_var('REDIS_USERNAME', '') }}"
       password: "{{ env_var('REDIS_PASSWORD', '') }}"
+      driver_options:
+        adbc.redis.tls_ca_file: "{{ env_var('REDIS_TLS_CA_FILE', '') }}"
       database: redis
       schema: analytics
       threads: 4
 ```
 
 Use a `rediss://` URI for TLS. Keep credentials in the separate username and
-password fields. From your project, verify the connection with:
+password fields. For a private CA, set `REDIS_TLS_CA_FILE` to its PEM bundle's
+absolute path. From your project, verify the connection with:
 
 ```shell
 dbt debug --profile redis_project
