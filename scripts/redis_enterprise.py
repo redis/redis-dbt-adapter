@@ -28,6 +28,12 @@ def command(*args, **kwargs):
     return subprocess.check_output(args, text=True, **kwargs).strip()
 
 
+class APIError(RuntimeError):
+    def __init__(self, method, path, code):
+        super().__init__(f'Enterprise API {method} {path}: HTTP {code}')
+        self.method, self.path, self.code = method, path, code
+
+
 def wait(check, description, seconds=300):
     deadline = time.monotonic() + seconds
     while time.monotonic() < deadline:
@@ -35,6 +41,12 @@ def wait(check, description, seconds=300):
             value = check()
             if value:
                 return value
+        except APIError as error:
+            transient_read = error.method == 'GET' and error.code in {502, 503, 504}
+            rejected_creation = (error.method == 'POST' and error.path == 'bdbs'
+                                 and error.code in {406, 409})
+            if not (transient_read or rejected_creation):
+                raise
         except (OSError, urllib.error.URLError):
             pass
         time.sleep(2)
@@ -60,7 +72,7 @@ class API:
         except urllib.error.HTTPError as error:
             code = error.code
             error.close()
-            raise RuntimeError(f'Enterprise API {method} {path}: HTTP {code}') from None
+            raise APIError(method, path, code) from None
 
 
 def certificates():
@@ -263,7 +275,8 @@ def up(github_env=False):
         'tls_mode': 'enabled', 'enforce_client_authentication': 'disabled',
         'authentication_redis_pass': secrets.token_urlsafe(32),
         'roles_permissions': [{'role_uid': role['uid'], 'redis_acl_uid': acl['uid']}]}
-    database = ensure('bdbs', lambda b: b['name'] == 'dbt-integration', body)
+    database = wait(lambda: ensure('bdbs', lambda b: b['name'] == 'dbt-integration', body),
+                    'database creation acceptance')
     uid = database['uid']
     wait(lambda: api.call('GET', f'bdbs/{uid}')['status'] == 'active', 'Enterprise database')
     wait(lambda: len([s for s in api.call('GET', f'bdbs/{uid}/shards')
