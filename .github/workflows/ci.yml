@@ -289,6 +289,9 @@ jobs:
           gh auth setup-git
           make driver
 
+      - name: Test connection configuration without a server
+        run: uv run pytest adapter/tests/unit -q
+
       - name: make adapter-tests
         run: make adapter-tests
 

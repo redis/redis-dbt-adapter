@@ -58,6 +58,53 @@ absolute path. From your project, verify the connection with:
 dbt debug --profile redis_project
 ```
 
+### Flight SQL
+
+To use a separately deployed [Redis Arrow Flight server](https://github.com/redis/redis-apache-arrow-flight),
+install the Flight client extra:
+
+```shell
+python -m pip install 'dbt-redis-adbc[flightsql]'
+```
+
+```yaml
+redis_project:
+  target: flight
+  outputs:
+    flight:
+      type: redis_adbc
+      transport: flightsql
+      uri: "{{ env_var('FLIGHT_SQL_URI', 'grpc://localhost:8815') }}"
+      username: "{{ env_var('FLIGHT_SQL_USERNAME', '') }}"
+      password: "{{ env_var('FLIGHT_SQL_PASSWORD', '') }}"
+      database: redis
+      schema: analytics
+      time_zone: UTC
+      threads: 4
+```
+
+The client loads `adbc_driver_flightsql` automatically; an explicit `driver`
+can point to a Flight SQL shared library instead. `REDIS_ADBC_DRIVER` applies
+only to the default `transport: redis`. The server loads Redis ADBC and needs
+Redis with Search. This mode targets the Redis-backed Flight SQL server,
+rather than arbitrary Flight SQL databases.
+
+Enable sessions on the server and route each connection to the same server
+process. The adapter enables Flight cookie middleware and sets schema/time zone
+in each connection's SQL session, preserving temporary tables across requests.
+Configure `aggregate_pushdown`, `rename_rekey`, Redis read/write timeouts and
+other `adbc.redis.*` options on the server; the client rejects those settings.
+`driver_options` accepts Flight client options, including TLS root certificates
+and RPC timeouts. Cookie middleware cannot be disabled.
+
+For TLS use `grpc+tls://` and configure certificate trust in the Flight client;
+username/password refer to the server's Flight authentication. Available TLS
+and authentication features depend on the server build. Follow its
+[deployment guide](https://github.com/redis/redis-apache-arrow-flight/blob/main/docs/server-guide.md).
+No SQL transactions are introduced by this transport. dbt v2 is separate.
+See the [local validation record](../FLIGHT_SQL_VALIDATION.md) for tested
+versions, workflow coverage, and deployment limits.
+
 ## Features and limitations
 
 - Tables, views, ephemeral models, Arrow bulk-loaded seeds, and snapshots

@@ -212,7 +212,27 @@ class RedisAdbcAdapter(SQLAdapter):
             reader = self._adbc().adbc_get_objects(
                 depth=depth, db_schema_filter=schema, table_name_filter=table
             )
-            return reader.read_all().to_pylist()
+            objects = reader.read_all().to_pylist()
+            if self.config.credentials.transport == "flightsql" and depth == "columns":
+                # Flight GetObjects reconstructs columns from Arrow schemas;
+                # it omits Redis SQL type names/precision and column comments.
+                # Preserve the backend's exact declarations for contracts,
+                # incremental schema comparisons and dbt's docs catalog.
+                for cat in objects:
+                    for s in cat["catalog_db_schemas"] or []:
+                        with self._adbc().cursor() as cursor:
+                            cursor.execute(
+                                "select table_name, column_name, driver_data_type, comment "
+                                "from information_schema.columns where table_schema = ?",
+                                (s["db_schema_name"],),
+                            )
+                            columns = {(t, c): (dtype, comment) for t, c, dtype, comment in cursor.fetchall()}
+                        for t in s["db_schema_tables"] or []:
+                            for c in t["table_columns"] or []:
+                                metadata = columns.get((t["table_name"], c["column_name"]))
+                                if metadata:
+                                    c["xdbc_type_name"], c["remarks"] = metadata
+            return objects
 
     def list_schemas(self, database: str) -> List[str]:
         return [
@@ -389,6 +409,21 @@ class RedisAdbcAdapter(SQLAdapter):
 
     def _ingest(self, relation: BaseRelation, table: pa.Table, mode: str) -> int:
         with self.connections.exception_handler(f"ingest into {relation}"):
+            if self.config.credentials.transport == "flightsql":
+                reader = table.to_reader() if isinstance(table, pa.Table) else table
+
+                def batches():
+                    seen = False
+                    for batch in reader:
+                        seen = True
+                        yield batch
+                    if not seen:
+                        # Flight DoPut needs a message even for zero rows.
+                        yield pa.RecordBatch.from_arrays(
+                            [pa.array([], type=f.type) for f in reader.schema], schema=reader.schema
+                        )
+
+                table = pa.RecordBatchReader.from_batches(reader.schema, batches())
             cur = self.connections.get_thread_connection().handle.cursor()
             try:
                 return cur.adbc_ingest(relation.identifier, table, mode=mode, db_schema_name=relation.schema)
