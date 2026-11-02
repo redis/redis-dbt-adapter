@@ -7,7 +7,8 @@ Compatible with dbt Core 1.10 and later 1.x releases.
 ## Install
 
 Requires Python 3.13 or later (PyArrow 26+) and Redis 8.x with the Query Engine (Search)
-enabled. The adapter is tested against Redis 8.6.2.
+enabled. Integration tests require a Redis Enterprise cluster with TLS and
+username/password authentication.
 
 ```shell
 python -m pip install dbt-redis-adbc
@@ -35,7 +36,7 @@ redis_project:
     dev:
       type: redis_adbc
       driver: "{{ env_var('REDIS_ADBC_DRIVER') }}"
-      uri: "{{ env_var('REDIS_URI', 'redis://localhost:6379/0') }}"
+      uri: "{{ env_var('REDIS_URI') }}"
       username: "{{ env_var('REDIS_USERNAME', '') }}"
       password: "{{ env_var('REDIS_PASSWORD', '') }}"
       database: redis

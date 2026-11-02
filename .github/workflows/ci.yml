@@ -20,8 +20,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: redis-enterprise-integration-${{ github.workflow }}
+  cancel-in-progress: false
 
 jobs:
   dependency-audit:
@@ -68,6 +68,9 @@ jobs:
       # Without the dev group (dbt-tests-adapter, pytest), which needs a newer
       # dbt-common than the oldest dbt-core allows.
       UV_NO_DEV: "1"
+      REDIS_URI: ${{ secrets.REDIS_URI }}
+      REDIS_USERNAME: ${{ secrets.REDIS_USERNAME }}
+      REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
     strategy:
       fail-fast: false
       matrix:
@@ -75,18 +78,13 @@ jobs:
         # locked: uv.lock. oldest: the lowest versions the pyproject.toml
         # files allow (the project's dbt-core, the adapter's other floors).
         versions: [locked, oldest]
-    services:
-      # As docker-compose.yml runs it.
-      redis:
-        image: redis:8.6.2
-        ports: ["6380:6379"]
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 2s
-          --health-timeout 3s
-          --health-retries 15
+      # The taxi project uses fixed schema names on the shared test cluster.
+      max-parallel: 1
     steps:
       - uses: actions/checkout@v7
+
+      - name: Require authenticated Redis Enterprise over TLS
+        run: python3 ../scripts/integration_config.py
 
       - uses: astral-sh/setup-uv@v10.2.0 # no major-version tags
         with:
@@ -176,6 +174,10 @@ jobs:
   # needs newer dbt packages than the oldest ones.
   adapter-tests:
     name: adapter tests (Python ${{ matrix.python }})
+    env:
+      REDIS_URI: ${{ secrets.REDIS_URI }}
+      REDIS_USERNAME: ${{ secrets.REDIS_USERNAME }}
+      REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -185,17 +187,11 @@ jobs:
       fail-fast: false
       matrix:
         python: ["3.13"]
-    services:
-      redis:
-        image: redis:8.6.2
-        ports: ["6380:6379"]
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 2s
-          --health-timeout 3s
-          --health-retries 15
     steps:
       - uses: actions/checkout@v7
+
+      - name: Require authenticated Redis Enterprise over TLS
+        run: python3 ../scripts/integration_config.py
 
       - uses: astral-sh/setup-uv@v10.2.0 # no major-version tags
         with:
