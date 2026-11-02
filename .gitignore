@@ -9,3 +9,6 @@ data/
 driver/
 build/
 dist/
+
+# Local Enterprise test credentials and private TLS keys
+.redis-enterprise/

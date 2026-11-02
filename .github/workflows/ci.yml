@@ -75,18 +75,14 @@ jobs:
         # locked: uv.lock. oldest: the lowest versions the pyproject.toml
         # files allow (the project's dbt-core, the adapter's other floors).
         versions: [locked, oldest]
-    services:
-      # As docker-compose.yml runs it.
-      redis:
-        image: redis:8.6.2
-        ports: ["6380:6379"]
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 2s
-          --health-timeout 3s
-          --health-retries 15
     steps:
       - uses: actions/checkout@v7
+
+      - name: Provision Redis Enterprise with TLS and a named user
+        run: python3 ../scripts/redis_enterprise.py up --github-env
+
+      - name: Require authenticated Redis Enterprise over TLS
+        run: python3 ../scripts/integration_config.py
 
       - uses: astral-sh/setup-uv@v10.2.0 # no major-version tags
         with:
@@ -185,17 +181,14 @@ jobs:
       fail-fast: false
       matrix:
         python: ["3.13"]
-    services:
-      redis:
-        image: redis:8.6.2
-        ports: ["6380:6379"]
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 2s
-          --health-timeout 3s
-          --health-retries 15
     steps:
       - uses: actions/checkout@v7
+
+      - name: Provision Redis Enterprise with TLS and a named user
+        run: python3 ../scripts/redis_enterprise.py up --github-env
+
+      - name: Require authenticated Redis Enterprise over TLS
+        run: python3 ../scripts/integration_config.py
 
       - uses: astral-sh/setup-uv@v10.2.0 # no major-version tags
         with:

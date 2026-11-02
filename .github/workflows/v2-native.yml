@@ -18,20 +18,16 @@ jobs:
     env:
       CARGO_PROFILE_DEV_DEBUG: "0"
       RUST_LOG: trace
-      REDIS_URI: redis://127.0.0.1:6380/0
-    services:
-      redis:
-        image: redis:8.6.2
-        ports: ["6380:6379"]
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 2s
-          --health-timeout 3s
-          --health-retries 15
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+
+      - name: Provision Redis Enterprise with TLS and a named user
+        run: python3 scripts/redis_enterprise.py up --github-env
+
+      - name: Require authenticated Redis Enterprise over TLS
+        run: python3 scripts/integration_config.py
 
       - name: Read pinned sources
         id: sources
@@ -94,27 +90,17 @@ jobs:
           REDIS_ADBC_DRIVER: ${{ github.workspace }}/v1/driver/libadbc_driver_redis.so
         run: python3 v2/parity.py --dbt "$GITHUB_WORKSPACE/engine/target/debug/dbt"
 
-      - name: Validate trusted TLS and credential precedence
+      - name: Validate credential precedence over TLS on Redis Enterprise
         env:
           REDIS_ADBC_DRIVER: ${{ github.workspace }}/v1/driver/libadbc_driver_redis.so
-          REDIS_USERNAME: default
-          REDIS_PASSWORD: parity-test-password
-          REDIS_URI: rediss://wrong:incorrect-uri-password@127.0.0.1:6381/0
         run: |
-          mkdir -p "$RUNNER_TEMP/redis-tls"
-          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost \
-            -addext subjectAltName=DNS:localhost,IP:127.0.0.1 \
-            -keyout "$RUNNER_TEMP/redis-tls/server.key" -out "$RUNNER_TEMP/redis-tls/server.crt"
-          chmod 644 "$RUNNER_TEMP/redis-tls/server.key"
-          docker run -d --name redis-v2-tls -p 127.0.0.1:6381:6379 \
-            -v "$RUNNER_TEMP/redis-tls:/certs:ro" redis:8.6.2 redis-server --port 0 --tls-port 6379 \
-            --tls-cert-file /certs/server.crt --tls-key-file /certs/server.key \
-            --tls-ca-cert-file /certs/server.crt --tls-auth-clients no --requirepass parity-test-password
-          for attempt in $(seq 1 30); do
-            if docker exec redis-v2-tls redis-cli --tls --cacert /certs/server.crt -a parity-test-password ping >/dev/null 2>&1; then break; fi
-            sleep 1
-          done
-          export SSL_CERT_FILE="$RUNNER_TEMP/redis-tls/server.crt"
+          export REDIS_URI="$(python3 - <<'PYURI'
+          import os
+          from urllib.parse import urlsplit, urlunsplit
+          uri = urlsplit(os.environ["REDIS_URI"])
+          print(urlunsplit(uri._replace(netloc="wrong:incorrect-uri-password@" + uri.netloc.rsplit("@", 1)[-1])))
+          PYURI
+          )"
           python3 v2/smoke.py --dbt "$GITHUB_WORKSPACE/engine/target/debug/dbt" --build
 
       - name: Download taxi data

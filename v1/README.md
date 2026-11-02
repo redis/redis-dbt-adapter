@@ -42,7 +42,8 @@ dbt  ──►  dbt-redis-adbc (adapter/)  ──►  adbc_driver_manager  ─�
 
 ### Requirements
 
-You need Docker, [uv](https://docs.astral.sh/uv/) (it provides Python
+You need a dedicated Redis Enterprise cluster with TLS and username/password
+authentication, [uv](https://docs.astral.sh/uv/) (it provides Python
 3.13 for dbt), and network access to hub.getdbt.com for `dbt deps`.
 Building the driver from source also needs Go 1.26.6 or newer and a C
 toolchain; on macOS arm64 and Linux (x86-64, arm64) the prebuilt one is used.
@@ -52,11 +53,25 @@ when logged in, or through HTTPS without authentication.
 
 ### Set up the environment
 
+To provision a dedicated local Enterprise cluster, run
+`python3 scripts/redis_enterprise.py up` from the repository root, then
+`source .redis-enterprise/env.sh` and return to `v1/`. See the
+[environment guide](../scripts/README.md) for topology, TLS trust, and lifecycle.
+If using that generated environment, keep its connection variables instead of
+the placeholders below.
+
+Configure a dedicated test database with the Query Engine enabled, a certificate
+trusted by the test machine, and an ACL user allowed to create, read, update,
+and drop test data. Set credentials in the environment before running setup:
+
 ```bash
+export REDIS_URI=rediss://your-enterprise-endpoint:port/0
+export REDIS_USERNAME=your-test-user
+export REDIS_PASSWORD='<your-test-password>'
 make setup
 ```
 
-`make setup` does four things:
+`make setup` validates the authenticated TLS configuration, then:
 
 - runs `uv sync` and `dbt deps` (dbt_utils, and the local `redis_adbc_utils`)
 - puts the driver in `driver/`: the prebuilt library from the pinned
@@ -65,8 +80,6 @@ make setup
   to a commit) it builds the driver from source instead; `make driver-build`
   always does
 - downloads the CSV into `data/`
-- starts Redis **8.6.2** on port 6380, matching CI. [Redis Cloud](https://redis.io/docs/latest/operate/rc/databases/version-management/)
-  supports Redis 8.6 and may run a different patch release
 
 ### Build the project
 
@@ -102,14 +115,14 @@ Use `make docs-serve` to browse the docs and lineage graph.
 
 ### Configure the connection
 
-Redis is published on **6380** so it doesn't collide with a local Redis on
-6379. Override the connection with `REDIS_URI` (for example
-`rediss://host:port/0` for Redis Cloud), credentials with `REDIS_USERNAME` and
-`REDIS_PASSWORD`, the session time zone with `REDIS_TIME_ZONE` (UTC by
-default), and the driver location with `REDIS_ADBC_DRIVER`. A password
-in `REDIS_URI` works too; `dbt debug` and the logs show it as `****`. Redis
-Flex (RAM + SSD) databases aren't supported: their Search lacks features every
-table needs, so the driver refuses them when it connects.
+All integration testing uses a dedicated Redis Enterprise cluster with TLS.
+`REDIS_URI` must use `rediss://host:port/0`, and `REDIS_USERNAME` and
+`REDIS_PASSWORD` must both be set. There is no local container fallback.
+Keep certificate verification enabled. For a private CA, set
+`REDIS_TLS_CA_FILE` to its PEM bundle; the profile passes it through the
+driver's `adbc.redis.tls_ca_file` option on macOS and Linux. Set `REDIS_TIME_ZONE` for the session time
+zone (UTC by default) and `REDIS_ADBC_DRIVER` for the driver location.
+Redis Flex (RAM + SSD) databases aren't supported.
 
 ## Project guide
 
@@ -137,7 +150,12 @@ data, which staging filters out.
 ### Continuous integration
 
 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs on every pull
-request and push to `main`, against Redis 8.6.2 and the pinned driver:
+request and push to `main`, against a Redis Enterprise test cluster and the
+pinned driver. Each integration job provisions its own three-shard Enterprise
+cluster with Search, TLS, a generated private CA, and a named database user.
+The setup masks the generated password and exports the connection settings
+through `GITHUB_ENV`; no preconfigured database secrets are needed. Jobs run
+against isolated databases, including each taxi dependency matrix entry. CI runs:
 
 - `make all`, failing on any error and unless the build gives exactly
   `PASS=82 WARN=1`
@@ -435,11 +453,11 @@ Each row is a HASH, and each table has a RediSearch index. On a cluster, add
 `-c` to `redis-cli` so it follows the key to its shard:
 
 ```bash
-docker exec redis-dbt-taxi redis-cli HGETALL raw:yellow_tripdata:1
+REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli --tls -u "$REDIS_URI" --user "$REDIS_USERNAME" HGETALL raw:yellow_tripdata:1
 ```
 
 ```bash
-docker exec redis-dbt-taxi redis-cli FT.INFO idx:raw:yellow_tripdata
+REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli --tls -u "$REDIS_URI" --user "$REDIS_USERNAME" FT.INFO idx:raw:yellow_tripdata
 ```
 
 Tables built by dbt's rename-swap keep the row key prefix and index of the
@@ -458,7 +476,7 @@ table instead of moving it to `__dbt_backup` first.
 Either way, a table's current prefix and index are in its metadata:
 
 ```bash
-docker exec redis-dbt-taxi redis-cli GET 'adbc:{meta}:table:taxi_marts:agg_daily_revenue'
+REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli --tls -u "$REDIS_URI" --user "$REDIS_USERNAME" GET 'adbc:{meta}:table:taxi_marts:agg_daily_revenue'
 ```
 
 The metadata also holds the comments `persist_docs` writes. They're easier to
@@ -471,7 +489,7 @@ uv run dbt show --inline "select table_name, comment from information_schema.tab
 To watch the `FT.AGGREGATE` / `HMGET` traffic while dbt runs:
 
 ```bash
-docker exec -it redis-dbt-taxi redis-cli MONITOR
+REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli --tls -u "$REDIS_URI" --user "$REDIS_USERNAME" MONITOR
 ```
 
 ## Data source

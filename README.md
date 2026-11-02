@@ -10,10 +10,18 @@ projects, and test resources.
 
 ## Run the v1 example
 
-Run the existing commands from `v1/`:
+All integration tests use a dedicated Redis Enterprise cluster with TLS and
+username/password authentication. To create a local Enterprise test cluster,
+run `python3 scripts/redis_enterprise.py up` and
+`source .redis-enterprise/env.sh` from the repository root; see the
+[environment guide](scripts/README.md). For an existing Enterprise cluster,
+run the commands from `v1/`:
 
 ```sh
 cd v1
+export REDIS_URI=rediss://your-enterprise-endpoint:port/0
+export REDIS_USERNAME=your-test-user
+export REDIS_PASSWORD='<your-test-password>'
 make setup
 make all
 ```
