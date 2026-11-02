@@ -28,16 +28,36 @@ DRIVER = Path(__file__).resolve().parents[3] / "driver" / "libadbc_driver_redis"
 @pytest.fixture(scope="class")
 def dbt_profile_target():
     require_integration_config()
-    return {
+    transport = os.environ.get("REDIS_ADBC_TRANSPORT", "redis")
+    if transport == "flightsql":
+        # REDIS_* describes the dedicated TLS Enterprise backend; Flight
+        # endpoint credentials and trust belong to the separate client hop.
+        options = {}
+        if os.environ.get("FLIGHT_SQL_TLS_CA_FILE"):
+            options["adbc.flight.sql.client_option.tls_root_certs"] = Path(
+                os.environ["FLIGHT_SQL_TLS_CA_FILE"]
+            ).read_text()
+        uri = os.environ["FLIGHT_SQL_URI"]
+        username = os.environ.get("FLIGHT_SQL_USERNAME", "")
+        password = os.environ.get("FLIGHT_SQL_PASSWORD", "")
+    else:
+        options = {"adbc.redis.tls_ca_file": os.environ["REDIS_TLS_CA_FILE"]} \
+            if os.environ.get("REDIS_TLS_CA_FILE") else {}
+        uri = os.environ["REDIS_URI"]
+        username = os.environ["REDIS_USERNAME"]
+        password = os.environ["REDIS_PASSWORD"]
+    target = {
         "type": "redis_adbc",
-        "driver": os.environ.get("REDIS_ADBC_DRIVER") or str(DRIVER),
-        "uri": os.environ["REDIS_URI"],
-        "username": os.environ["REDIS_USERNAME"],
-        "password": os.environ["REDIS_PASSWORD"],
-        "driver_options": {"adbc.redis.tls_ca_file": os.environ["REDIS_TLS_CA_FILE"]}
-        if os.environ.get("REDIS_TLS_CA_FILE") else {},
+        "transport": transport,
+        "uri": uri,
+        "username": username,
+        "password": password,
+        "driver_options": options,
         "threads": 4,
     }
+    if os.environ.get("REDIS_ADBC_DRIVER") or transport == "redis":
+        target["driver"] = os.environ.get("REDIS_ADBC_DRIVER") or str(DRIVER)
+    return target
 
 
 @pytest.fixture(scope="class")

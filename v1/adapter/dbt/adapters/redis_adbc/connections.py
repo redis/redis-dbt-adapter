@@ -4,7 +4,7 @@ import os
 import sys
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, Optional, Set, Tuple, Union
+from typing import Any, Dict, Iterable, Literal, Optional, Set, Tuple, Union
 from urllib.parse import urlsplit, urlunsplit
 
 import adbc_driver_manager
@@ -35,6 +35,8 @@ _PROFILE_OPTIONS = {
 # Unknown profile keys already warned about (profiles can load more than once).
 _warned_keys: Set[str] = set()
 
+_FLIGHT_COOKIES = "adbc.flight.sql.rpc.with_cookie_middleware"
+
 
 def _option_value(value: Any) -> str:
     # ADBC options are strings; booleans as the driver spells them.
@@ -45,6 +47,7 @@ def _option_value(value: Any) -> str:
 
 @dataclass
 class RedisAdbcCredentials(Credentials):
+    transport: Literal["redis", "flightsql"] = "redis"
     # Path to libadbc_driver_redis.{so,dylib,dll}; falls back to $REDIS_ADBC_DRIVER.
     driver: Optional[str] = None
     uri: str = "redis://localhost:6379/0"
@@ -84,7 +87,22 @@ class RedisAdbcCredentials(Credentials):
                 )
             if not isinstance(value, (str, int, float, bool)):
                 raise DbtRuntimeError(f"driver_options: {option} must be a string, number or boolean")
+        if data.get("transport") == "flightsql":
+            cls._validate_flight_options(data)
         return data
+
+    @staticmethod
+    def _validate_flight_options(data):
+        if not data.get("uri", "").startswith(("grpc://", "grpc+tls://")):
+            raise DbtRuntimeError("Flight SQL requires a grpc:// or grpc+tls:// uri")
+        for name in ("aggregate_pushdown", "rename_rekey", "read_timeout", "write_timeout"):
+            if data.get(name) not in (None, ""):
+                raise DbtRuntimeError(f"Flight SQL: configure `{name}` on the Flight server")
+        for option, value in (data.get("driver_options") or {}).items():
+            if option.startswith("adbc.redis."):
+                raise DbtRuntimeError(f"Flight SQL: configure `{option}` on the Flight server")
+            if option == _FLIGHT_COOKIES and _option_value(value) != "true":
+                raise DbtRuntimeError("Flight SQL requires cookie middleware for dbt sessions")
 
     @classmethod
     def validate(cls, data):
@@ -102,6 +120,7 @@ class RedisAdbcCredentials(Credentials):
 
     def _connection_keys(self) -> Tuple[str, ...]:
         return (
+            "transport",
             "driver",
             "uri",
             "database",
@@ -118,9 +137,20 @@ class RedisAdbcCredentials(Credentials):
     def connection_info(self, *, with_aliases: bool = False) -> Iterable[Tuple[str, Any]]:
         # dbt debug prints these and logs them: never the URI's password.
         for key, value in super().connection_info(with_aliases=with_aliases):
+            if key == "driver_options" and value:
+                # Flight options can contain bearer tokens or private keys.
+                value = {option: "<redacted>" for option in value}
             yield key, _redact_uri(value) if key == "uri" and value else value
 
     def driver_path(self) -> str:
+        if self.transport == "flightsql" and not self.driver:
+            try:
+                import adbc_driver_flightsql
+            except ImportError as e:
+                raise DbtRuntimeError(
+                    "Install dbt-redis-adbc[flightsql] or set `driver` to the Flight SQL library"
+                ) from e
+            return adbc_driver_flightsql._driver_path()
         path = self.driver or os.environ.get("REDIS_ADBC_DRIVER")
         if not path:
             raise DbtRuntimeError(
@@ -135,6 +165,14 @@ class RedisAdbcCredentials(Credentials):
     def db_kwargs(self) -> Dict[str, str]:
         """The driver's database options for this profile."""
         kwargs = {option: _option_value(v) for option, v in (self.driver_options or {}).items()}
+        if self.transport == "flightsql":
+            self._validate_flight_options(vars(self))
+            kwargs[_FLIGHT_COOKIES] = "true"
+            for name in ("uri", "username", "password"):
+                value = getattr(self, name)
+                if value is not None and value != "":
+                    kwargs[name] = value
+            return kwargs
         for option, name in _PROFILE_OPTIONS.items():
             value = getattr(self, name)
             # None, or "" from an unset env_var, leaves the driver's default.
@@ -237,6 +275,21 @@ class RedisAdbcConnectionManager(SQLConnectionManager):
 
         def connect():
             conn = dbapi.connect(driver=creds.driver_path(), db_kwargs=creds.db_kwargs(), autocommit=True)
+            if creds.transport == "flightsql":
+                try:
+                    # Prime the cookie before SET: the server starts a session
+                    # on the first request that returns its cookie.
+                    with conn.cursor() as cursor:
+                        cursor.execute("SELECT 1")
+                        cursor.fetchall()
+                        schema = creds.schema.replace('"', '""')
+                        cursor.execute(f'SET search_path TO "{schema}"')
+                        if creds.time_zone:
+                            zone = creds.time_zone.replace("'", "''")
+                            cursor.execute(f"SET TIME ZONE '{zone}'")
+                except Exception:
+                    conn.close()
+                    raise
             return RedisAdbcHandle(conn)
 
         return cls.retry_connection(

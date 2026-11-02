@@ -320,6 +320,13 @@ extension, the adapter adds `.dylib`, `.so` or `.dll`), `uri`, `username`,
 `aggregate_pushdown` (`exact` / `all` / `none`), `rename_rekey` (see
 [Looking at the data in Redis](#looking-at-the-data-in-redis)), and:
 
+- `transport`: `redis` (default) loads Redis ADBC directly; `flightsql` loads
+  the ADBC Flight SQL client and connects to a Redis-backed Flight server.
+  Install `dbt-redis-adbc[flightsql]`, use a `grpc://` or `grpc+tls://` URI,
+  and enable server sessions. Schema and time zone are set per session;
+  Redis-specific options must be configured on the server. See the
+  [Flight SQL profile](adapter/README.md#flight-sql).
+
 - `time_zone`: the session time zone, for example `America/New_York` (UTC
   by default). `current_timestamp` shows in it, `localtimestamp` and
   snapshots' `dbt_valid_from` / `dbt_valid_to` are its local time, and
@@ -337,7 +344,7 @@ extension, the adapter adds `.dylib`, `.so` or `.dll`), `uri`, `username`,
   profile key of their own (`adbc.redis.time_zone`, `password`, …) must be
   set with it.
 
-`dbt debug` shows these options. A profile key the adapter doesn't know is
+`dbt debug` shows these options with driver option values redacted. A profile key the adapter doesn't know is
 ignored with a warning.
 
 ## Compatibility and limitations
