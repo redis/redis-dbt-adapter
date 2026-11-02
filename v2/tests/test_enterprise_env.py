@@ -14,7 +14,8 @@ import redis_enterprise
 
 class EnterpriseStartupTests(unittest.TestCase):
     def test_retries_unavailable_bootstrap_and_rejected_database_creation(self):
-        for method, path, code in [('GET', 'bootstrap', 503), ('POST', 'bdbs', 406)]:
+        for method, path, code in [('GET', 'bootstrap', 503), ('POST', 'bdbs', 406),
+                                   ('PUT', 'cluster/certificates', 503)]:
             with self.subTest(method=method, code=code), \
                  patch.object(redis_enterprise.time, 'sleep'), \
                  patch.object(redis_enterprise.time, 'monotonic', return_value=0):
@@ -24,7 +25,8 @@ class EnterpriseStartupTests(unittest.TestCase):
 
     def test_does_not_retry_auth_errors_or_ambiguous_writes(self):
         for method, path, code in [('GET', 'bootstrap', 401), ('GET', 'bootstrap', 403),
-                                   ('POST', 'users', 503), ('POST', 'bdbs', 400)]:
+                                   ('POST', 'users', 503), ('POST', 'bdbs', 400),
+                                   ('PUT', 'cluster/certificates', 401), ('PUT', 'bdbs/1', 503)]:
             with self.subTest(method=method, code=code):
                 check = unittest.mock.Mock(side_effect=redis_enterprise.APIError(method, path, code))
                 with self.assertRaises(redis_enterprise.APIError):

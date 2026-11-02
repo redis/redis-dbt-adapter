@@ -45,7 +45,9 @@ def wait(check, description, seconds=300):
             transient_read = error.method == 'GET' and error.code in {502, 503, 504}
             rejected_creation = (error.method == 'POST' and error.path == 'bdbs'
                                  and error.code in {406, 409})
-            if not (transient_read or rejected_creation):
+            certificate_startup = (error.method == 'PUT' and error.path == 'cluster/certificates'
+                                   and error.code in {502, 503, 504})
+            if not (transient_read or rejected_creation or certificate_startup):
                 raise
         except (OSError, urllib.error.URLError):
             pass
@@ -250,9 +252,13 @@ def up(github_env=False):
             requested = True
         return state == 'completed'
     wait(bootstrapped, 'Enterprise bootstrap')
-    bootstrap_api.call('PUT', 'cluster/certificates', {'certificates': [
-        {'name': name, 'certificate': (STATE / 'server.crt').read_text(),
-         'key': (STATE / 'server.key').read_text()} for name in ['api', 'proxy']]})
+    def install_certificates():
+        # Reapplying the same certificates is idempotent while the API starts.
+        bootstrap_api.call('PUT', 'cluster/certificates', {'certificates': [
+            {'name': name, 'certificate': (STATE / 'server.crt').read_text(),
+             'key': (STATE / 'server.key').read_text()} for name in ['api', 'proxy']]})
+        return True
+    wait(install_certificates, 'management certificate installation')
     api = API(credentials)
     wait(lambda: api.call('GET', 'cluster'), 'verified management TLS')
     (STATE / 'verified-api').touch()
@@ -267,7 +273,8 @@ def up(github_env=False):
         {'email': credentials['username'], 'name': 'dbt integration',
          'password': credentials['password'], 'role_uids': [role['uid']]})
     body = {'name': 'dbt-integration', 'type': 'redis', 'redis_version': '8.6',
-        'port': 12000, 'memory_size': 1073741824, 'replication': False,
+        # Full refresh temporarily keeps both the old table and its replacement.
+        'port': 12000, 'memory_size': 2147483648, 'replication': False,
         'data_persistence': 'disabled', 'eviction_policy': 'noeviction',
         'shards_count': 3, 'sharding': True, 'shards_placement': 'dense',
         'shard_key_regex': [{'regex': '.*\\{(?<tag>.*)\\}.*'}, {'regex': '(?<tag>.*)'}],

@@ -13,7 +13,9 @@ make adapter-tests
 Requires Docker, OpenSSL, Python 3, and `uv` for the dbt runtime. This creates a
 dedicated `redis-dbt-enterprise` container from `redislabs/redis:8.2.0-78.18`.
 It uses the built-in development trial. The cluster has one Enterprise node
-and a three-shard Redis 8.6 RAM database with Search and QPF 4x. It is a local
+and a three-shard Redis 8.6 RAM database with Search and QPF 4x. Its 2 GiB
+database limit allows full refreshes to retain an old table while building its
+replacement during the taxi demos. It is a local
 test cluster without replication, not an HA deployment.
 
 Only localhost ports are published:
