@@ -112,7 +112,7 @@ versions, workflow coverage, and deployment limits.
 - Model contracts, persisted relation and column descriptions, and Python table models
 - No SQL transactions or rollback: statements autocommit, and interrupted writes
   may need cleanup or a rerun
-- No materialized views or SQL grants; configure access with Redis ACLs
+- No materialized views. Native SELECT grants can opt into dedicated Redis Software ACLs; see [SQL grants](../README.md#sql-grants-through-dedicated-redis-software-acls).
 - Python models run in the dbt process and load their inputs into its memory;
   incremental Python models are not supported
 

@@ -79,3 +79,22 @@ def test_driver_option_secrets_are_redacted():
         "adbc.flight.sql.authorization_header": "secret-token",
     }).connection_info())
     assert "secret-token" not in str(info)
+
+
+def test_rbac_grants_are_explicit_and_native():
+    from types import SimpleNamespace
+    from dbt.adapters.redis_adbc.impl import RedisAdbcAdapter
+
+    for transport, options, expected in [
+        ("redis", None, False),
+        ("redis", {"adbc.redis.rbac": ""}, False),
+        ("redis", {"adbc.redis.rbac": '{"password":"secret"}'}, True),
+        ("flightsql", {"adbc.redis.rbac": "configured"}, False),
+    ]:
+        adapter = SimpleNamespace(config=SimpleNamespace(credentials=SimpleNamespace(
+            transport=transport, driver_options=options,
+        )))
+        assert RedisAdbcAdapter.rbac_grants_enabled(adapter) is expected
+
+    creds = credentials(driver_options={"adbc.redis.rbac": '{"password":"secret"}'})
+    assert dict(creds.connection_info())["driver_options"] == {"adbc.redis.rbac": "<redacted>"}
