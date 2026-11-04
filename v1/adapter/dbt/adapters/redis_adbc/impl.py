@@ -297,6 +297,14 @@ class RedisAdbcAdapter(SQLAdapter):
         super().rename_relation(from_relation, to_relation)
 
     @available
+    def rbac_grants_enabled(self) -> bool:
+        """Use native enforced grants only with explicit management configuration."""
+        creds = self.config.credentials
+        return creds.transport == "redis" and bool(
+            (creds.driver_options or {}).get("adbc.redis.rbac")
+        )
+
+    @available
     def list_relations_table(self, schema_relation: BaseRelation) -> agate.Table:
         # For the list_relations_without_caching macro (dbt-postgres's columns).
         rows = [

@@ -221,7 +221,7 @@ not the adapter. For example:
 - relations render as `schema.table`.
 
 Skipped, with the reason in the test:
-- grants and materialized views
+- general SQL privileges and materialized views
 - zero-copy `dbt clone` (dbt clone creates views)
 - arrays
 - incremental Python models (Python models are tables)
@@ -288,7 +288,7 @@ materializations, so the adapter covers what isn't SQL:
 | Connection | `adbc_driver_manager` DB-API, autocommit. The driver has no transactions: it accepts dbt's `BEGIN`/`COMMIT` as no-ops, and a `SET LOCAL` lasts until the model's `COMMIT`, as on Postgres. Results over 65,536 rows stream from the driver, so an error in a later batch is raised as dbt reads the rows; the adapter reports it as a database error, like one from the query. Ctrl-C and `--fail-fast` cancel the running statements and streamed results (ADBC `StatementCancel`); each fails with `CANCELLED`, which the adapter reports as a runtime error rather than a database error |
 | Metadata | Relations, columns and the docs catalog come from ADBC `GetObjects`; table comments come from `information_schema.tables`. Relations are matched with their case, since the driver keeps schema and table names as written (`alias='MyTable'` works). Column types are parsed as dbt-postgres reports them (`numeric` with precision and scale, `character varying` with its length) |
 | `persist_docs` | Descriptions are stored with `COMMENT ON TABLE` / `VIEW` / `COLUMN`; the marts turn it on |
-| `grants` | Skipped with a warning (see [Known limitations](#known-limitations)) |
+| `grants` | Native SELECT grants use dedicated Redis Software ACLs when `adbc.redis.rbac` is configured; otherwise skipped with a warning. See [setup](#sql-grants-through-dedicated-redis-software-acls). |
 | Temporary tables | `make_temp_relation` renders them unqualified (a schema-qualified name always means a permanent table), and their columns are looked up under `pg_temp` |
 | Incremental strategies | `append`, `delete+insert` (the default with a `unique_key`), `merge`, and `microbatch` (each batch replaces its `event_time` window; batches can run in parallel) |
 | Seed reloads | A reload without `--full-refresh` checks the CSV's columns before truncating, so a mismatch leaves the table as it was (there's no transaction to roll the `TRUNCATE` back) |
@@ -440,9 +440,11 @@ the dbt features above all work. These limits come from the design:
   so neither works on any adapter.
 - **No materialized views.** `materialized='materialized_view'` stops with
   a clear error.
-- **No grants.** Redis controls access per user with ACLs (key patterns and
-  commands), not SQL privileges on tables, so a `grants` config is skipped
-  with a warning.
+- **Limited grants.** Opt-in native SELECT grants require a driver with enforced
+  RBAC support and provisioned dedicated Redis Software ACLs. Other privileges,
+  view grants and Flight SQL grants are unsupported. Without configuration,
+  grants retain the historical skip-with-warning behavior.
+
 
 ## Redis operations
 
@@ -508,3 +510,51 @@ NYC TLC yellow taxi trip records for January 2019, as CSV, from the
 [DataTalksClub mirror](https://github.com/DataTalksClub/nyc-tlc-data). The TLC
 itself now publishes only Parquet. Zone lookup:
 [TLC taxi zones](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
+
+
+## SQL grants through dedicated Redis Software ACLs
+
+Use a native Redis ADBC driver that supports `adbc.redis.rbac` and follow its
+[dedicated ACL provisioning and recovery guide](https://github.com/redis/redis-adbc-driver/blob/main/docs/sql-rbac.md).
+Users of a bound role must have a single Redis role; mixed-role users are
+rejected by the initial driver mapping. Roles and users are provisioned by an
+administrator. This adapter never changes
+role membership. Provide the write-only management JSON through a secret profile
+value; do not commit management credentials:
+
+```yaml
+driver_options:
+  adbc.redis.rbac: "{{ env_var('DBT_ENV_SECRET_REDIS_RBAC') }}"
+```
+
+A table or incremental model can then use:
+
+```sql
+{{ config(materialized='incremental', grants={'select': ['analyst']}) }}
+select 42 as id
+```
+
+Each grantee is quoted and sent in a separate statement. Existing grants are
+read from `information_schema.role_table_grants` and compared with the model's
+configuration; an unchanged incremental run sends no redundant grant.
+Set `grants={'select': []}` on an existing incremental model to revoke managed
+SELECT grants. An absent/empty grants configuration follows dbt's normal no-op
+behavior. Unsupported privileges fail explicitly when RBAC is enabled. Base
+tables only; the driver rejects views, `PUBLIC`, grant options and other object
+kinds. Without `adbc.redis.rbac`, the adapter continues to warn and skip grants.
+Flight SQL does not enable this native management path.
+
+The driver manages only its dedicated ACL contribution. Other roles/ACLs may
+still permit reads after revoke. Enforcement propagation, prefix-changing DDL,
+metadata visibility, interrupted-write locks and recovery follow the driver's
+contract. Grants do not make dbt writes transactional.
+
+An opt-in end-to-end test is in
+`adapter/tests/integration/test_rbac_grants.py`. In an isolated Software database,
+provision the dedicated role/ACL/reader first and set `REDIS_URI`,
+`REDIS_ADBC_DRIVER`, `SSL_CERT_FILE`, `REDIS_RBAC_TEST_CONFIG` (management JSON),
+`REDIS_RBAC_TEST_ROLE`, and `REDIS_RBAC_TEST_READER_URI`. Run it sequentially:
+
+```sh
+python -m pytest adapter/tests/integration/test_rbac_grants.py -q
+```
