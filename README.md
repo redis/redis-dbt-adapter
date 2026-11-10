@@ -1,5 +1,7 @@
 # Redis adapters for dbt
 
+**[Documentation website](https://redis.github.io/redis-dbt-adapter/)**
+
 **[Installation guide: install the adapter, native driver, and build your first model](docs/INSTALLATION.md)**
 
 ## Install the dbt Core adapter
