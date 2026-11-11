@@ -98,6 +98,54 @@ January 2 alone, which replaces only that day:
 make microbatch-demo
 ```
 
+To see what an API reading the target sees when a batch fails, run this after
+`make all` (see [issue #42](https://github.com/redis/redis-dbt-adapter/issues/42)):
+
+```bash
+make microbatch-failure-demo
+```
+
+The failure demo copies the taxi microbatch model into a temporary project. It
+reads `taxi_intermediate.int_trips_enriched` and writes only a random
+`dbt_microbatch_failure_*` schema, which it drops on exit. For another input
+schema, use `ARGS="--source-schema your_intermediate_schema"`. It uses the
+connection environment variables below; it does not load a custom profile.
+Keep the source stable during the demo so recovery can be compared exactly.
+
+A separate dbt process backfills January 1–3. On the January 2 refresh, a
+demo-only client fault injector intercepts the generated DELETE/INSERT SQL,
+sends the actual DELETE, and pauses before sending INSERT. The reader keeps
+the same independent ADBC connection open and issues fresh queries during the
+interrupted refresh and at every checkpoint.
+After it observes the gap, the demo terminates the writer, then reruns just
+January 2 twice through dbt without fault injection or `--full-refresh`.
+There is no timing race to hit the interruption point, and production adapter
+macros and model SQL are unchanged.
+
+| Reader checkpoint | January 1 | January 2 | January 3 |
+| --- | --- | --- | --- |
+| Before refresh | Expected rows | Expected rows | Expected rows |
+| DELETE complete, writer paused | Unchanged | **No rows** | Unchanged |
+| Writer terminated | Unchanged | **Still no rows** | Unchanged |
+| Same batch rerun | Unchanged | Restored | Unchanged |
+| Same batch rerun again | Unchanged | Restored, no duplicates | Unchanged |
+
+The command prints observed per-day counts at each checkpoint and fails if any
+row or value differs from the expected source, if a `trip_id` is duplicated,
+or if a neighboring day's rows change. CI runs it against the loaded taxi data.
+The table describes the deliberately paused statement boundary; reads during
+an actively executing DELETE or INSERT may also see partial progress. This
+demo does not assert statement-level atomicity.
+
+For an API, a refresh can therefore return a successful but incomplete query
+result. Autocommit leaves the missing day visible until recovery; terminating
+the writer does not roll it back. Rerunning the same window replaces its rows,
+which also removes partial inserts before reloading. If an API requires a
+complete published dataset throughout refresh, build and validate a separate
+version and have the application switch its active version only after success.
+Retain the previous version for existing readers; this demo does not establish
+an atomic SQL rename/swap guarantee.
+
 Use `make docs-serve` to browse the docs and lineage graph.
 
 ### Configure the connection
@@ -405,6 +453,10 @@ the dbt features above all work. These limits come from the design:
   for arrives. A statement that was writing keeps the rows it already
   wrote until the next run drops its relation. A cancelled `rename_rekey`
   rename leaves the table as it was.
+  For microbatch, stopping after DELETE leaves that window missing from the
+  live target until the same batch is rerun; there is no rollback. Run
+  `make microbatch-failure-demo` to observe this with an independent reader
+  and verify recovery without duplicates.
 - **Python models are tables, and run in the dbt process.** Each ref a
   Python model reads is loaded whole into dbt's memory. Python models can't
   be incremental: dbt's incremental materialization runs only SQL models,

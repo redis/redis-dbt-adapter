@@ -57,6 +57,9 @@ jobs:
       - name: Test the v2 smoke runner without v1 dependencies
         run: uv run --no-project --python 3.13 python -m unittest discover -s v2/tests -v
 
+      - name: Test the microbatch failure boundary and recovery checks
+        run: uv run --no-project --python 3.13 python -m unittest discover -s v1/scripts/tests -v
+
   project:
     name: project (Python ${{ matrix.python }}, ${{ matrix.versions }} dbt)
     runs-on: ubuntu-latest
@@ -155,6 +158,9 @@ jobs:
 
       - name: make microbatch-demo
         run: ./scripts/ci_check.py demo microbatch-demo
+
+      - name: Reader visibility and recovery after interrupted microbatch
+        run: make microbatch-failure-demo
 
       - name: dbt build --empty
         run: |
