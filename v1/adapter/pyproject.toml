@@ -21,6 +21,7 @@ dependencies = [
     "dbt-adapters>=1.16,<2",
     "adbc-driver-manager>=1.6,<2",
     "pyarrow>=26,<27",
+    "sqlparse>=0.5,<1",
 ]
 
 [project.optional-dependencies]
