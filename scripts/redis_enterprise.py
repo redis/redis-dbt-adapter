@@ -47,8 +47,8 @@ def wait(check, description, seconds=300):
                                  and error.code in {406, 409})
             certificate_startup = (error.method == 'PUT' and error.path == 'cluster/certificates'
                                    # Bootstrap can complete before the generated admin
-                                   # credentials reach the management API workers.
-                                   and error.code in {401, 502, 503, 504})
+                                   # credentials and admin role reach the API workers.
+                                   and error.code in {401, 403, 502, 503, 504})
             if not (transient_read or rejected_creation or certificate_startup):
                 raise
         except (OSError, urllib.error.URLError):
