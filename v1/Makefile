@@ -4,7 +4,7 @@ DBT := uv run dbt
 # to check the numbers (scripts/ci_check.py).
 SHOW_FLAGS ?=
 
-.PHONY: setup enterprise-up enterprise-check integration-config driver driver-build data deps debug seed load run test build snapshot incremental-demo snapshot-demo microbatch-demo adapter-tests docs docs-serve clean all
+.PHONY: setup enterprise-up enterprise-check integration-config driver driver-build data deps debug seed load run test build snapshot incremental-demo snapshot-demo microbatch-demo microbatch-failure-demo adapter-tests docs docs-serve clean all
 
 ## One-time setup: configure the Enterprise connection, Python env, driver, data
 setup: integration-config deps driver data
@@ -35,7 +35,7 @@ enterprise-check:
 integration-config:
 	python3 ../scripts/integration_config.py
 
-debug seed load run test build snapshot incremental-demo snapshot-demo microbatch-demo adapter-tests docs: integration-config
+debug seed load run test build snapshot incremental-demo snapshot-demo microbatch-demo microbatch-failure-demo adapter-tests docs: integration-config
 
 ## dbt commands
 debug:
@@ -90,6 +90,10 @@ microbatch-demo:
 	$(DBT) run -s fct_trips_microbatch --vars '{microbatch_demo: true}' --full-refresh --event-time-start 2019-01-01 --event-time-end 2019-01-04
 	$(DBT) run -s fct_trips_microbatch --vars '{microbatch_demo: true}' --event-time-start 2019-01-02 --event-time-end 2019-01-03
 	$(DBT) show $(SHOW_FLAGS) --vars '{microbatch_demo: true}' --inline "select pickup_date, count(*) as trips from {{ ref('fct_trips_microbatch') }} group by pickup_date order by pickup_date"
+
+# Uses the loaded taxi intermediate as input, with an isolated demo target.
+microbatch-failure-demo:
+	uv run python scripts/microbatch_failure_demo.py $(ARGS)
 
 # dbt's adapter test suite (adapter/tests/functional): each test class makes
 # and drops its own schemas in REDIS_URI's database.
