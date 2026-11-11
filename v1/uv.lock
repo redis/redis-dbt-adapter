@@ -282,6 +282,7 @@ dependencies = [
     { name = "dbt-adapters" },
     { name = "dbt-core" },
     { name = "pyarrow" },
+    { name = "sqlparse" },
 ]
 
 [package.metadata]
@@ -291,6 +292,7 @@ requires-dist = [
     { name = "dbt-adapters", specifier = ">=1.16,<2" },
     { name = "dbt-core", specifier = ">=1.10,<2" },
     { name = "pyarrow", specifier = ">=26,<27" },
+    { name = "sqlparse", specifier = ">=0.5,<1" },
 ]
 provides-extras = ["flightsql"]
 

@@ -1,7 +1,10 @@
 """Connection management: dbt <-> Redis ADBC driver via adbc_driver_manager's DB-API."""
 
 import os
+import random
 import sys
+import tempfile
+import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, Literal, Optional, Set, Tuple, Union
@@ -9,6 +12,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 import adbc_driver_manager
 import adbc_driver_manager.dbapi as dbapi
+import sqlparse
 from adbc_driver_manager import AdbcStatusCode
 from dbt_common.exceptions import DbtDatabaseError, DbtRuntimeError
 
@@ -197,20 +201,92 @@ def _redact_uri(uri: str, keep_user: bool = True) -> str:
     return urlunsplit((parts.scheme, host, parts.path, parts.query, parts.fragment))
 
 
+class RedisAdbcCursor:
+    """Retry native refused publications, without replaying committed SQL/input."""
+
+    def __init__(self, conn):
+        self._conn = conn
+        self._cursor = conn.cursor()
+
+    def __getattr__(self, name):
+        return getattr(self._cursor, name)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self._cursor.close()
+
+    def _publish(self, action, replayable):
+        for attempt in range(20):
+            try:
+                return action()
+            except adbc_driver_manager.OperationalError as error:
+                # This specific 40001 is a refused publication, not an unknown
+                # commit outcome. Other errors and consumed input must surface.
+                if not (
+                    replayable
+                    and error.sqlstate == "40001"
+                    and "snapshot catalog changed concurrently; retry the statement" in str(error)
+                    and attempt < 19
+                ):
+                    raise
+                self._cursor.close()
+                self._cursor = self._conn.cursor()
+                delay = random.uniform(0.05, 0.1) * min(2 ** attempt, 16)
+                logger.debug(f"Redis ADBC: retrying snapshot publication conflict in {delay:.2f}s")
+                time.sleep(delay)
+
+    def execute(self, operation, parameters=None, **kwargs):
+        if parameters is not None:
+            return self._cursor.execute(operation, parameters, **kwargs)
+        # The native driver autocommits each statement in a script. Split first
+        # so a conflict never replays an earlier statement that already committed.
+        for statement in sqlparse.split(operation) or [operation]:
+            self._publish(lambda: self._cursor.execute(statement, **kwargs), replayable=True)
+        return self
+
+    def adbc_ingest(self, table_name, data, **kwargs):
+        import pyarrow as pa
+
+        if isinstance(data, pa.RecordBatchReader):
+            # Capture a one-shot reader once, without holding its entire result
+            # in memory. Every attempt opens fresh input from the private spool.
+            with tempfile.TemporaryFile() as spool:
+                with pa.ipc.new_file(spool, data.schema) as writer:
+                    for batch in data:
+                        writer.write_batch(batch)
+
+                def ingest():
+                    spool.seek(0)
+                    saved = pa.ipc.open_file(spool)
+                    batches = (saved.get_batch(i) for i in range(saved.num_record_batches))
+                    with pa.RecordBatchReader.from_batches(saved.schema, batches) as reader:
+                        return self._cursor.adbc_ingest(table_name, reader, **kwargs)
+
+                return self._publish(ingest, replayable=True)
+        # Tables supply fresh Arrow input; unknown stream types are not replayed.
+        return self._publish(
+            lambda: self._cursor.adbc_ingest(table_name, data, **kwargs),
+            replayable=isinstance(data, pa.Table),
+        )
+
+
 class RedisAdbcHandle:
     """Wraps an ADBC DB-API connection so cursors dbt never closes get closed.
 
     ADBC refuses to close a connection while it still has open statements.
     """
 
-    def __init__(self, conn: dbapi.Connection):
+    def __init__(self, conn: dbapi.Connection, native: bool = True):
         self.conn = conn
+        self.native = native
         self._cursors: list = []
 
     def cursor(self):
         # Close finished cursors eagerly so statements don't pile up.
         self._cursors = [c for c in self._cursors if not c._closed]
-        cur = self.conn.cursor()
+        cur = RedisAdbcCursor(self.conn) if self.native else self.conn.cursor()
         self._cursors.append(cur)
         return cur
 
@@ -290,7 +366,7 @@ class RedisAdbcConnectionManager(SQLConnectionManager):
                 except Exception:
                     conn.close()
                     raise
-            return RedisAdbcHandle(conn)
+            return RedisAdbcHandle(conn, native=creds.transport == "redis")
 
         return cls.retry_connection(
             connection,

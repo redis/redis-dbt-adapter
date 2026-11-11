@@ -13,7 +13,7 @@ deps:
 	uv sync
 	$(DBT) deps
 
-# The prebuilt driver from the pinned release (scripts/driver-version), or a
+# The prebuilt driver from the latest release, or a
 # build from source where there's none. driver-build always builds.
 driver:
 	./scripts/download_driver.sh

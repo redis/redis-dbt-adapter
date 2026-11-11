@@ -12,13 +12,14 @@ class StartupTests(unittest.TestCase):
     def test_certificate_install_retries_until_admin_credentials_propagate(self):
         check = Mock(side_effect=[
             fixture.APIError('PUT', 'cluster/certificates', 401),
+            fixture.APIError('PUT', 'cluster/certificates', 403),
             fixture.APIError('PUT', 'cluster/certificates', 503),
             True,
         ])
         with patch.object(fixture.time, 'sleep') as sleep:
             self.assertTrue(fixture.wait(check, 'management certificate installation'))
-        self.assertEqual(check.call_count, 3)
-        self.assertEqual(sleep.call_count, 2)
+        self.assertEqual(check.call_count, 4)
+        self.assertEqual(sleep.call_count, 3)
 
     def test_persistent_certificate_auth_failure_times_out(self):
         check = Mock(side_effect=fixture.APIError('PUT', 'cluster/certificates', 401))
@@ -32,7 +33,7 @@ class StartupTests(unittest.TestCase):
         for method, path, code in [
             ('GET', 'cluster', 401),
             ('POST', 'users', 401),
-            ('PUT', 'cluster/certificates', 403),
+            ('POST', 'users', 403),
             ('PUT', 'cluster/certificates', 400),
         ]:
             with self.subTest(method=method, path=path, code=code):
