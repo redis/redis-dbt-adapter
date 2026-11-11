@@ -1,4 +1,6 @@
 .venv/
+.venv-docs/
+site/
 __pycache__/
 *.egg-info/
 target/
@@ -9,3 +11,6 @@ data/
 driver/
 build/
 dist/
+
+# Local Enterprise test credentials and private TLS keys
+.redis-enterprise/

@@ -3,15 +3,22 @@
 from pathlib import Path
 from contextlib import redirect_stdout
 import io
+import os
 import sys
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from microbatch_failure_demo import delete_prefix, verify_rows
+from microbatch_failure_demo import delete_prefix, run_demo, verify_rows
 
 
 class FailureDemoTests(unittest.TestCase):
     target = '"demo"."fct_trips_microbatch"'
+
+    def test_missing_enterprise_config_fails_before_connecting(self):
+        with patch.dict(os.environ, {}, clear=True):
+            with self.assertRaisesRegex(ValueError, "REDIS_URI"):
+                run_demo("taxi_intermediate")
 
     def test_only_delete_is_sent_at_the_fault_boundary(self):
         delete = f"/* dbt query comment */\ndelete from {self.target} as DBT_INTERNAL_TARGET\nwhere pickup_datetime >= '2019-01-02' and pickup_datetime < '2019-01-03'"

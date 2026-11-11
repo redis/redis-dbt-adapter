@@ -18,6 +18,9 @@ import tempfile
 import time
 import uuid
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+from integration_config import require_integration_config
+
 
 MODEL = "fct_trips_microbatch"
 COLUMNS = "trip_id, pickup_datetime, pickup_date, pickup_borough, payment_type_name, total_amount"
@@ -79,6 +82,7 @@ def verify_rows(actual, expected, stage):
 
 
 def run_demo(source_schema):
+    require_integration_config()
     from adbc_driver_manager import dbapi
     from dbt.adapters.redis_adbc.connections import RedisAdbcCredentials
 
@@ -87,10 +91,11 @@ def run_demo(source_schema):
     credentials = RedisAdbcCredentials(
         database="redis", schema=schema,
         driver=os.environ.get("REDIS_ADBC_DRIVER", str(root / "driver/libadbc_driver_redis")),
-        uri=os.environ.get("REDIS_URI", "redis://localhost:6380/0"),
-        username=os.environ.get("REDIS_USERNAME", ""),
-        password=os.environ.get("REDIS_PASSWORD", ""),
+        uri=os.environ["REDIS_URI"],
+        username=os.environ["REDIS_USERNAME"],
+        password=os.environ["REDIS_PASSWORD"],
         time_zone=os.environ.get("REDIS_TIME_ZONE", ""),
+        driver_options={"adbc.redis.tls_ca_file": os.environ.get("REDIS_TLS_CA_FILE", "")},
     )
     source = f'{quote(source_schema)}."int_trips_enriched"'
     target = f'{quote(schema)}.{quote(MODEL)}'
@@ -108,7 +113,8 @@ def run_demo(source_schema):
         }))
         profile = {key: getattr(credentials, key) for key in
                    ["database", "schema", "uri", "username", "password", "time_zone"]}
-        profile.update(type="redis_adbc", driver=credentials.driver_path(), threads=1)
+        profile.update(type="redis_adbc", driver=credentials.driver_path(), threads=1,
+                       driver_options=credentials.driver_options)
         profile_path = project / "profiles.yml"
         profile_path.touch(mode=0o600)
         profile_path.write_text(json.dumps({"microbatch_failure": {"target": "dev", "outputs": {"dev": profile}}}))

@@ -1,0 +1,55 @@
+site_name: Redis adapters for dbt
+site_description: Install and configure the Redis adapter for dbt, build SQL and Python models, and explore the NYC taxi example and experimental native dbt v2 integration.
+site_url: https://redis.github.io/redis-dbt-adapter/
+repo_url: https://github.com/redis/redis-dbt-adapter
+repo_name: redis/redis-dbt-adapter
+edit_uri: blob/main/
+docs_dir: website/content
+site_dir: site
+strict: true
+
+theme:
+  name: readthedocs
+  locale: en
+  highlightjs: true
+
+plugins:
+  - search
+
+hooks:
+  - website/hooks.py
+
+markdown_extensions:
+  - admonition
+  - tables
+  - fenced_code
+  - toc:
+      permalink: true
+
+extra_css:
+  - stylesheets/extra.css
+
+validation:
+  links:
+    anchors: warn
+    unrecognized_links: warn
+
+nav:
+  - Overview: README.md
+  - Installation: docs/INSTALLATION.md
+  - dbt Core:
+      - NYC taxi example: v1/README.md
+      - Adapter configuration: v1/adapter/README.md
+      - Package compatibility: v1/redis_adbc_utils/README.md
+      - Flight SQL validation: v1/FLIGHT_SQL_VALIDATION.md
+  - Native dbt v2:
+      - Setup and usage: v2/README.md
+      - Validation results: v2/VALIDATION.md
+      - Implementation: v2/IMPLEMENTATION.md
+  - Maintainers:
+      - Local Enterprise environment: scripts/README.md
+      - Releases: scripts/RELEASING.md
+      - Dependency notes: v1/DEPENDENCIES.md
+      - Native SELECT grants: docs/changes/driver-issue-108-grants.md
+      - Repository migration: MIGRATION.md
+      - Publishing this site: docs/PUBLISHING.md

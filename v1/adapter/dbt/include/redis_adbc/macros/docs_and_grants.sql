@@ -17,11 +17,38 @@
   '{{ (comment or "") | replace("'", "''") }}'
 {%- endmacro %}
 
-{#- grants: Redis controls access per user with ACLs (key patterns and
-    commands), not SQL privileges, and the driver has no SHOW GRANTS, GRANT
-    or REVOKE. Skip with a warning rather than fail the model. -#}
+{#- Enforced native grants require explicit dedicated-ACL configuration.
+    Unconfigured profiles retain the historical warning; no SQL is sent. -#}
 {% macro redis_adbc__apply_grants(relation, grant_config, should_revoke=True) -%}
-  {%- if grant_config -%}
-    {%- do exceptions.warn("grants are skipped for " ~ relation ~ ": Redis controls access with ACLs, not GRANT") -%}
+  {%- if adapter.rbac_grants_enabled() -%}
+    {%- set select_grants = {} -%}
+    {%- for privilege, grantees in (grant_config or {}).items() -%}
+      {%- if privilege | lower != 'select' -%}
+        {{ exceptions.raise_compiler_error("Redis RBAC grants support only SELECT on base tables") }}
+      {%- endif -%}
+      {%- do select_grants.update({'select': grantees}) -%}
+    {%- endfor -%}
+    {{ return(dbt.default__apply_grants(relation, select_grants, should_revoke)) }}
+  {%- elif grant_config -%}
+    {%- do exceptions.warn("grants are skipped for " ~ relation ~ ": configure adbc.redis.rbac for enforced native SELECT grants") -%}
   {%- endif -%}
+{%- endmacro %}
+
+{% macro redis_adbc__support_multiple_grantees_per_dcl_statement() -%}
+  {{ return(False) }}
+{%- endmacro %}
+
+{% macro redis_adbc__get_show_grant_sql(relation) -%}
+  select grantee, lower(privilege_type) as privilege_type
+  from information_schema.role_table_grants
+  where table_schema = {{ redis_adbc__comment_literal(relation.schema) }}
+    and table_name = {{ redis_adbc__comment_literal(relation.identifier) }}
+{%- endmacro %}
+
+{% macro redis_adbc__get_grant_sql(relation, privilege, grantees) -%}
+  grant {{ privilege }} on table {{ relation.render() }} to {{ adapter.quote(grantees[0]) }}
+{%- endmacro %}
+
+{% macro redis_adbc__get_revoke_sql(relation, privilege, grantees) -%}
+  revoke {{ privilege }} on table {{ relation.render() }} from {{ adapter.quote(grantees[0]) }}
 {%- endmacro %}

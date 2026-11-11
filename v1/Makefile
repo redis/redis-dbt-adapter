@@ -4,10 +4,10 @@ DBT := uv run dbt
 # to check the numbers (scripts/ci_check.py).
 SHOW_FLAGS ?=
 
-.PHONY: setup redis-up redis-down driver driver-build data deps debug seed load run test build snapshot incremental-demo snapshot-demo microbatch-demo microbatch-failure-demo adapter-tests docs docs-serve clean all
+.PHONY: setup enterprise-up enterprise-check integration-config driver driver-build data deps debug seed load run test build snapshot incremental-demo snapshot-demo microbatch-demo microbatch-failure-demo adapter-tests docs docs-serve clean all
 
-## One-time setup: Python env, driver, data, Redis
-setup: deps driver data redis-up
+## One-time setup: configure the Enterprise connection, Python env, driver, data
+setup: integration-config deps driver data
 
 deps:
 	uv sync
@@ -24,11 +24,18 @@ driver-build:
 data:
 	./scripts/download_data.sh
 
-redis-up:
-	docker compose up --detach --wait redis
+# Provision/verify the dedicated localhost Enterprise TLS cluster.
+enterprise-up:
+	python3 ../scripts/redis_enterprise.py up
 
-redis-down:
-	docker compose down
+enterprise-check:
+	python3 ../scripts/redis_enterprise.py verify
+
+# All live project and adapter checks require the Enterprise test connection.
+integration-config:
+	python3 ../scripts/integration_config.py
+
+debug seed load run test build snapshot incremental-demo snapshot-demo microbatch-demo microbatch-failure-demo adapter-tests docs: integration-config
 
 ## dbt commands
 debug:
@@ -102,5 +109,5 @@ docs-serve: docs
 clean:
 	$(DBT) clean
 
-## Everything, from an empty Redis
+## Everything, on a dedicated Redis Enterprise test cluster
 all: debug seed load build docs

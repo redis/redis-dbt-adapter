@@ -1,0 +1,148 @@
+name: Publish to PyPI
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing stable version tag to build and test
+        required: true
+        type: string
+      publish:
+        description: Publish to PyPI and finalize GitHub release after tests pass
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pypi-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build tagged distributions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      source_sha: ${{ steps.source.outputs.sha }}
+      tag: ${{ steps.source.outputs.tag }}
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - name: Check out release tooling
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: tooling
+          persist-credentials: false
+      - name: Validate tag syntax
+        run: '[[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]'
+      - name: Check out tagged source
+        uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ inputs.tag || github.ref_name }}
+          path: source
+          persist-credentials: false
+      - name: Verify source identity and version
+        id: source
+        run: |
+          sha="$(git -C source rev-parse HEAD)"
+          test "$sha" = "$(git -C source rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          echo "SOURCE_DATE_EPOCH=$(git -C source show -s --format=%ct HEAD)" >> "$GITHUB_ENV"
+          python3 tooling/scripts/verify_release.py "$RELEASE_TAG" --source source/v1/adapter
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          python-version: "3.13"
+      - name: Build wheel and source archive once
+        run: |
+          uv build --python 3.13 source/v1/adapter --out-dir dist
+          # uv creates this convenience file alongside the distributions.
+          rm -f dist/.gitignore
+      - name: Verify distributions and metadata
+        run: |
+          (cd dist && sha256sum *.whl *.tar.gz > SHA256SUMS)
+          python3 tooling/scripts/verify_release.py "$RELEASE_TAG" dist
+          uvx --python 3.13 twine==7.0.0 check --strict dist/*.whl dist/*.tar.gz
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-distributions
+          path: dist/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-validation-tools
+          path: tooling/scripts/check_wheel_install.py
+          if-no-files-found: error
+
+  validate:
+    name: Test built wheel
+    needs: build
+    uses: ./.github/workflows/ci.yml
+    with:
+      source_ref: ${{ needs.build.outputs.source_sha }}
+      wheel_artifact: release-distributions
+
+  publish:
+    name: Publish tested distributions
+    needs: [build, validate]
+    if: github.event_name == 'push' || inputs.publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: pypi
+      url: https://pypi.org/project/dbt-redis-adbc/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: release-distributions
+          path: dist/
+      - name: Keep checksums out of the PyPI upload
+        run: rm dist/SHA256SUMS
+      - name: Publish through the PyPI trusted publisher
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # Retries may follow a successful upload and failed finalization.
+          # Finalization requires PyPI's files to match these exact artifacts.
+          skip-existing: true
+
+  finalize:
+    name: Verify PyPI and finalize GitHub release
+    needs: [build, validate, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ needs.build.outputs.tag }}
+      SOURCE_SHA: ${{ needs.build.outputs.source_sha }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v7
+        with:
+          name: release-distributions
+          path: dist/
+      - name: Verify the exact distributions are on PyPI
+        run: python3 scripts/verify_release.py "$RELEASE_TAG" dist --pypi
+      - name: Publish GitHub release with the same artifacts
+        run: |
+          # Refuse to finalize a tag moved while testing or publishing ran.
+          git fetch --force origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+          test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$SOURCE_SHA"
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --verify-tag --draft --generate-notes \
+              --title "dbt-redis-adbc ${RELEASE_TAG#v}"
+          fi
+          gh release upload "$RELEASE_TAG" dist/* --clobber
+          gh release edit "$RELEASE_TAG" --draft=false --latest

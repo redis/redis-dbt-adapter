@@ -275,7 +275,7 @@ wheels = [
 
 [[package]]
 name = "dbt-redis-adbc"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "adapter" }
 dependencies = [
     { name = "adbc-driver-manager" },
@@ -286,11 +286,13 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "adbc-driver-flightsql", marker = "extra == 'flightsql'", specifier = ">=1.6,<2" },
     { name = "adbc-driver-manager", specifier = ">=1.6,<2" },
     { name = "dbt-adapters", specifier = ">=1.16,<2" },
     { name = "dbt-core", specifier = ">=1.10,<2" },
     { name = "pyarrow", specifier = ">=26,<27" },
 ]
+provides-extras = ["flightsql"]
 
 [[package]]
 name = "dbt-tests-adapter"

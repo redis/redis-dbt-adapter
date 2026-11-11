@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dbt-redis-adbc"
-version = "0.1.0"
+version = "0.2.0"
 description = "dbt adapter for Redis 8.x using the Redis ADBC driver"
 readme = "README.md"
 authors = [{ name = "Albert T. Wong" }]
@@ -22,6 +22,9 @@ dependencies = [
     "adbc-driver-manager>=1.6,<2",
     "pyarrow>=26,<27",
 ]
+
+[project.optional-dependencies]
+flightsql = ["adbc-driver-flightsql>=1.6,<2"]
 
 [project.urls]
 Homepage = "https://github.com/redis/redis-dbt-adapter"

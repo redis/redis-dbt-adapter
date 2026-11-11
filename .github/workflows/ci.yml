@@ -5,6 +5,16 @@ name: CI
 # latest release (or a given release or commit), so a driver change that
 # breaks the project shows up before the pin is bumped.
 on:
+  workflow_call:
+    inputs:
+      source_ref:
+        description: Exact source commit to validate
+        type: string
+        required: true
+      wheel_artifact:
+        description: Artifact from this run containing the built release wheel
+        type: string
+        required: true
   pull_request:
   push:
     branches: [main]
@@ -33,6 +43,9 @@ jobs:
         python: ["3.13"]
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
+          persist-credentials: false
       - uses: astral-sh/setup-uv@v10.2.0
         with:
           python-version: ${{ matrix.python }}
@@ -51,11 +64,18 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
+          persist-credentials: false
       - uses: astral-sh/setup-uv@v10.2.0
         with:
           python-version: "3.13"
       - name: Test the v2 smoke runner without v1 dependencies
-        run: uv run --no-project --python 3.13 python -m unittest discover -s v2/tests -v
+        run: |
+          uv run --no-project --python 3.13 python -m unittest discover -s v2/tests -v
+          if [ -d scripts/tests ]; then
+            uv run --no-project --python 3.13 python -m unittest discover -s scripts/tests -v
+          fi
 
       - name: Test the microbatch failure boundary and recovery checks
         run: uv run --no-project --python 3.13 python -m unittest discover -s v1/scripts/tests -v
@@ -78,18 +98,17 @@ jobs:
         # locked: uv.lock. oldest: the lowest versions the pyproject.toml
         # files allow (the project's dbt-core, the adapter's other floors).
         versions: [locked, oldest]
-    services:
-      # As docker-compose.yml runs it.
-      redis:
-        image: redis:8.6.2
-        ports: ["6380:6379"]
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 2s
-          --health-timeout 3s
-          --health-retries 15
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
+          persist-credentials: false
+
+      - name: Provision Redis Enterprise with TLS and a named user
+        run: python3 ../scripts/redis_enterprise.py up --github-env
+
+      - name: Require authenticated Redis Enterprise over TLS
+        run: python3 ../scripts/integration_config.py
 
       - uses: astral-sh/setup-uv@v10.2.0 # no major-version tags
         with:
@@ -100,7 +119,6 @@ jobs:
       - name: Install the dependencies
         run: |
           uv sync --locked
-          uv run dbt deps
 
       - name: Install the oldest versions
         if: matrix.versions == 'oldest'
@@ -109,13 +127,33 @@ jobs:
           # Otherwise `uv run` syncs back to uv.lock.
           echo UV_NO_SYNC=1 >> "$GITHUB_ENV"
 
+      - name: Download the release wheel
+        if: inputs.wheel_artifact != ''
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.wheel_artifact }}
+          path: ${{ runner.temp }}/release-dist
+      - name: Download the wheel validation helper
+        if: inputs.wheel_artifact != ''
+        uses: actions/download-artifact@v7
+        with:
+          name: release-validation-tools
+          path: ${{ runner.temp }}/release-tools
+      - name: Install and verify the built wheel
+        if: inputs.wheel_artifact != ''
+        run: |
+          uv pip install --no-deps --reinstall "$RUNNER_TEMP"/release-dist/*.whl
+          uv run --no-sync python "$RUNNER_TEMP/release-tools/check_wheel_install.py" "$RUNNER_TEMP/release-dist"
+          echo UV_NO_SYNC=1 >> "$GITHUB_ENV"
+
       - name: Choose the latest driver release
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        if: inputs.wheel_artifact == '' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         env:
           GH_TOKEN: ${{ github.token }}
           REQUESTED: ${{ inputs.driver_version }}
         run: |
-          version="${REQUESTED:-$(gh release view --repo redis/redis-adbc-driver --json tagName --jq .tagName)}"
+          # Use REST for public cross-repository reads with the workflow token.
+          version="${REQUESTED:-$(gh api repos/redis/redis-adbc-driver/releases/latest --jq .tag_name)}"
           echo "DRIVER_VERSION=${version}" >> "$GITHUB_ENV"
 
       # A commit has no prebuilt driver: make driver builds it from source.
@@ -132,6 +170,9 @@ jobs:
         run: |
           gh auth setup-git
           make driver
+
+      - name: Install dbt packages
+        run: uv run dbt deps
 
       - name: Cache the trips CSV
         uses: actions/cache@v6
@@ -190,17 +231,17 @@ jobs:
       fail-fast: false
       matrix:
         python: ["3.13"]
-    services:
-      redis:
-        image: redis:8.6.2
-        ports: ["6380:6379"]
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 2s
-          --health-timeout 3s
-          --health-retries 15
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
+          persist-credentials: false
+
+      - name: Provision Redis Enterprise with TLS and a named user
+        run: python3 ../scripts/redis_enterprise.py up --github-env
+
+      - name: Require authenticated Redis Enterprise over TLS
+        run: python3 ../scripts/integration_config.py
 
       - uses: astral-sh/setup-uv@v10.2.0 # no major-version tags
         with:
@@ -211,13 +252,33 @@ jobs:
       - name: Install the dependencies
         run: uv sync --locked
 
+      - name: Download the release wheel
+        if: inputs.wheel_artifact != ''
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.wheel_artifact }}
+          path: ${{ runner.temp }}/release-dist
+      - name: Download the wheel validation helper
+        if: inputs.wheel_artifact != ''
+        uses: actions/download-artifact@v7
+        with:
+          name: release-validation-tools
+          path: ${{ runner.temp }}/release-tools
+      - name: Install and verify the built wheel
+        if: inputs.wheel_artifact != ''
+        run: |
+          uv pip install --no-deps --reinstall "$RUNNER_TEMP"/release-dist/*.whl
+          uv run --no-sync python "$RUNNER_TEMP/release-tools/check_wheel_install.py" "$RUNNER_TEMP/release-dist"
+          echo UV_NO_SYNC=1 >> "$GITHUB_ENV"
+
       - name: Choose the latest driver release
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        if: inputs.wheel_artifact == '' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         env:
           GH_TOKEN: ${{ github.token }}
           REQUESTED: ${{ inputs.driver_version }}
         run: |
-          version="${REQUESTED:-$(gh release view --repo redis/redis-adbc-driver --json tagName --jq .tagName)}"
+          # Use REST for public cross-repository reads with the workflow token.
+          version="${REQUESTED:-$(gh api repos/redis/redis-adbc-driver/releases/latest --jq .tag_name)}"
           echo "DRIVER_VERSION=${version}" >> "$GITHUB_ENV"
 
       - uses: actions/setup-go@v7
@@ -233,6 +294,9 @@ jobs:
         run: |
           gh auth setup-git
           make driver
+
+      - name: Test connection configuration without a server
+        run: uv run pytest adapter/tests/unit -q
 
       - name: make adapter-tests
         run: make adapter-tests

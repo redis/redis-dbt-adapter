@@ -59,9 +59,11 @@ Python Core 1.x. From this repository's root:
 # Parse only; no Redis connection or driver download is performed by the runner.
 python3 v2/smoke.py --dbt /absolute/path/to/dbt-v2
 
-# Use a Redis-enabled engine build and a test Redis instance.
+# Use a Redis-enabled engine build and a dedicated Redis Enterprise test cluster.
 export REDIS_ADBC_DRIVER=/absolute/path/to/libadbc_driver_redis.dylib
-export REDIS_URI=redis://localhost:6380/0
+export REDIS_URI=rediss://your-enterprise-endpoint:port/0
+export REDIS_USERNAME=your-test-user
+export REDIS_PASSWORD='<your-test-password>'
 # Debug engine builds require trace spans; a restrictive RUST_LOG can panic.
 RUST_LOG=trace python3 v2/smoke.py --dbt /absolute/path/to/dbt-v2 --build
 ```
@@ -142,7 +144,9 @@ python3.13 -m venv .venv-v2
 .venv-v2/bin/python -m pip install -r v2/requirements-python.txt
 export PATH="$PWD/.venv-v2/bin:$PATH"
 export REDIS_ADBC_DRIVER=/absolute/path/to/libadbc_driver_redis.dylib
-export REDIS_URI=redis://localhost:6380/0
+export REDIS_URI=rediss://your-enterprise-endpoint:port/0
+export REDIS_USERNAME=your-test-user
+export REDIS_PASSWORD='<your-test-password>'
 RUST_LOG=trace python3 v2/parity.py --dbt /absolute/path/to/dbt-v2
 RUST_LOG=trace python3 v2/taxi.py --dbt /absolute/path/to/dbt-v2 \
   --csv "$PWD/v1/data/yellow_tripdata_2019-01.csv.gz"
@@ -162,9 +166,13 @@ runner supports gzip, stable file row IDs, stride sampling, and row limits; it
 validates the sampled input before replacing an existing table. Loading is
 memory-bound, matching v1's sampled-table behavior.
 
-TLS uses the driver's `rediss://` URI and system certificate trust. Local tests
-confirmed strict rejection of an untrusted certificate and encrypted transport
-with the explicit test URI parameter `skip_verify=true`. The Linux workflow
-adds the temporary certificate to Go's trust input; verification and credential
-precedence passed without a verification bypass. Use trusted certificates in
-normal deployments.
+All live integration checks require a Redis Enterprise cluster with TLS,
+`REDIS_USERNAME`, and `REDIS_PASSWORD`. The runners reject plaintext URIs,
+missing credentials, and `skip_verify` bypasses before invoking dbt. Certificates must be trusted. For a private CA, set `REDIS_TLS_CA_FILE`
+to its PEM bundle; the profiles pass it as `adbc.redis.tls_ca_file`. This
+works with the native macOS verifier as well as Linux. The native workflow provisions a dedicated three-shard Enterprise cluster
+with TLS and a named user on its runner, then exports verified connection
+settings with the generated password masked. No database secrets are required.
+For external test endpoints, provision an Enterprise database with Search; the
+scripts validate connection settings, while the operator provisions the cluster.
+Parse-only checks and mocked unit tests need no database.
