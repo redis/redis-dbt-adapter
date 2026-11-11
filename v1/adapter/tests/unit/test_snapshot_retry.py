@@ -49,12 +49,12 @@ def test_script_does_not_replay_committed_prefix(sleep):
 
 @patch("dbt.adapters.redis_adbc.connections.time.sleep")
 def test_retries_are_bounded_and_preserve_error(sleep):
-    errors = [conflict() for _ in range(10)]
+    errors = [conflict() for _ in range(20)]
     cursor, cursors = cursor_with_errors(errors)
     with pytest.raises(adbc.OperationalError) as raised:
         cursor.execute("create table t (id int)")
     assert raised.value is errors[-1]
-    assert sleep.call_count == 9
+    assert sleep.call_count == 19
     assert all(raw.execute.call_count == 1 for raw in cursors)
 
 
@@ -86,10 +86,29 @@ def test_arrow_table_supplies_reusable_input(sleep):
 
 
 @patch("dbt.adapters.redis_adbc.connections.time.sleep")
-def test_arrow_reader_is_never_replayed(sleep):
+def test_arrow_reader_is_captured_once_and_reopened_for_retry(sleep):
+    cursor, cursors = cursor_with_errors([conflict(), None])
+    table = pa.table({"id": [1, 2, 3]})
+    seen = []
+
+    def ingest(name, reader):
+        seen.append(reader.read_all().to_pylist())
+        if len(seen) == 1:
+            raise conflict()
+        return 3
+
+    for raw in cursors:
+        raw.adbc_ingest.side_effect = ingest
+    assert cursor.adbc_ingest("t", table.to_reader(max_chunksize=1)) == 3
+    assert seen == [table.to_pylist(), table.to_pylist()]
+    sleep.assert_called_once()
+
+
+@patch("dbt.adapters.redis_adbc.connections.time.sleep")
+def test_unknown_stream_is_never_replayed(sleep):
     cursor, cursors = cursor_with_errors([conflict()])
     with pytest.raises(adbc.OperationalError):
-        cursor.adbc_ingest("t", pa.table({"id": [1]}).to_reader())
+        cursor.adbc_ingest("t", object())
     cursors[0].adbc_ingest.assert_called_once()
     sleep.assert_not_called()
 

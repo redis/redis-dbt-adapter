@@ -40,11 +40,13 @@ def delete_prefix(sql, target):
 
 
 def worker(project, schema, marker, recover=False):
-    from adbc_driver_manager import dbapi
+    from dbt.adapters.redis_adbc.connections import RedisAdbcCursor
     from dbt.cli.main import dbtRunner
 
     if marker:
-        execute = dbapi.Cursor.execute
+        # Intercept the adapter call before it splits the autocommitted script
+        # into individually retryable native statements.
+        execute = RedisAdbcCursor.execute
         # RedisAdbcRelation's default quote policy renders these unquoted.
         target = f"{schema}.{MODEL}"
 
@@ -59,7 +61,7 @@ def worker(project, schema, marker, recover=False):
             time.sleep(120)
             raise RuntimeError("Fault injector timed out waiting for termination")
 
-        dbapi.Cursor.execute = interrupt
+        RedisAdbcCursor.execute = interrupt
 
     args = ["run", "--project-dir", project, "--profiles-dir", project,
             "--vars", "{microbatch_demo: true}", "-s", MODEL if marker else "+" + MODEL,
@@ -113,7 +115,9 @@ def run_demo(source_schema):
         }))
         profile = {key: getattr(credentials, key) for key in
                    ["database", "schema", "uri", "username", "password", "time_zone"]}
-        profile.update(type="redis_adbc", driver=credentials.driver_path(), threads=1,
+        # dbt 1.10's concurrent microbatch scheduler needs another worker after
+        # its first batch; a one-thread profile can deadlock between batches.
+        profile.update(type="redis_adbc", driver=credentials.driver_path(), threads=4,
                        driver_options=credentials.driver_options)
         profile_path = project / "profiles.yml"
         profile_path.touch(mode=0o600)

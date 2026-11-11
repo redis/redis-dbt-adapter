@@ -3,6 +3,7 @@
 import os
 import random
 import sys
+import tempfile
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -217,7 +218,7 @@ class RedisAdbcCursor:
         self._cursor.close()
 
     def _publish(self, action, replayable):
-        for attempt in range(10):
+        for attempt in range(20):
             try:
                 return action()
             except adbc_driver_manager.OperationalError as error:
@@ -227,7 +228,7 @@ class RedisAdbcCursor:
                     replayable
                     and error.sqlstate == "40001"
                     and "snapshot catalog changed concurrently; retry the statement" in str(error)
-                    and attempt < 9
+                    and attempt < 19
                 ):
                     raise
                 self._cursor.close()
@@ -248,8 +249,23 @@ class RedisAdbcCursor:
     def adbc_ingest(self, table_name, data, **kwargs):
         import pyarrow as pa
 
-        # A Table supplies fresh Arrow input on every call. Readers/streams can
-        # already be exhausted when publication fails, so never replay those.
+        if isinstance(data, pa.RecordBatchReader):
+            # Capture a one-shot reader once, without holding its entire result
+            # in memory. Every attempt opens fresh input from the private spool.
+            with tempfile.TemporaryFile() as spool:
+                with pa.ipc.new_file(spool, data.schema) as writer:
+                    for batch in data:
+                        writer.write_batch(batch)
+
+                def ingest():
+                    spool.seek(0)
+                    saved = pa.ipc.open_file(spool)
+                    batches = (saved.get_batch(i) for i in range(saved.num_record_batches))
+                    with pa.RecordBatchReader.from_batches(saved.schema, batches) as reader:
+                        return self._cursor.adbc_ingest(table_name, reader, **kwargs)
+
+                return self._publish(ingest, replayable=True)
+        # Tables supply fresh Arrow input; unknown stream types are not replayed.
         return self._publish(
             lambda: self._cursor.adbc_ingest(table_name, data, **kwargs),
             replayable=isinstance(data, pa.Table),
