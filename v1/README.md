@@ -77,8 +77,8 @@ make setup
 `make setup` validates the authenticated TLS configuration, then:
 
 - runs `uv sync` and `dbt deps` (dbt_utils, and the local `redis_adbc_utils`)
-- puts the driver in `driver/`: the prebuilt library from the pinned
-  release (`v0.0.18`, in `scripts/driver-version`), after checking its SHA-256.
+- puts the driver in `driver/`: the prebuilt library from the latest
+  published release, after checking its SHA-256.
   Where the release has no build (another platform, or `DRIVER_VERSION` set
   to a commit) it builds the driver from source instead; `make driver-build`
   always does
@@ -202,7 +202,7 @@ data, which staging filters out.
 
 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs on every pull
 request and push to `main`, against a Redis Enterprise test cluster and the
-pinned driver. Each integration job provisions its own three-shard Enterprise
+latest released driver. Each integration job provisions its own three-shard Enterprise
 cluster with Search, TLS, a generated private CA, and a named database user.
 The setup masks the generated password and exports the connection settings
 through `GITHUB_ENV`; no preconfigured database secrets are needed. Jobs run
@@ -223,9 +223,9 @@ CI also runs [dbt's adapter test suite](#dbts-adapter-test-suite) on Python
 3.13, with the locked versions only: dbt-tests-adapter needs newer
 dbt packages than the oldest ones.
 
-Nightly, all of it runs against the driver's latest release, so a driver change
-that breaks the project shows up before the pin is bumped. To test another
-release or a driver commit, run the workflow by hand with `driver_version`.
+Every CI run, including pull requests, nightly builds and release validation,
+resolves the driver's latest published release. Run the workflow by hand to
+repeat validation against the current release.
 
 CI also audits the locked Python runtime and test dependencies and the optional
 v2 Python runtime with `pip-audit`. The current runtime uses PyArrow 26 and the
@@ -276,7 +276,7 @@ Skipped, with the reason in the test:
 - backslash escapes (standard SQL strings, as dbt-postgres skips)
 - `get_catalog_for_single_relation`, which dbt-core never calls
 
-The pinned driver supports all snapshot tests, including `dbt_valid_to_current`
+The latest released driver supports all snapshot tests, including `dbt_valid_to_current`
 with `date(x)`; these run as ordinary tests so regressions fail CI.
 
 ## Repository reference
@@ -401,7 +401,7 @@ ignored with a warning.
 
 Building this project turned up these issues, all filed on
 [redis/redis-adbc-driver](https://github.com/redis/redis-adbc-driver/issues).
-All of them are fixed in the pinned driver, v0.0.18.
+All of them were fixed by driver v0.0.18 and remain covered on the latest release.
 
 | Issue | Fixed in |
 |-|-|

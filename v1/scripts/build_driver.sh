@@ -6,7 +6,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DRIVER_REPO="${DRIVER_REPO:-https://github.com/redis/redis-adbc-driver.git}"
-DRIVER_VERSION="${DRIVER_VERSION:-$(cat "${ROOT}/scripts/driver-version")}"
+DRIVER_VERSION="$(bash "${ROOT}/scripts/resolve_driver_version.sh")"
+export DRIVER_VERSION
 SRC="${ROOT}/build/redis-adbc-driver"
 
 case "$(uname -s)" in

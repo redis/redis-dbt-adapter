@@ -74,7 +74,7 @@ jobs:
       - name: Test local Arrow runtime
         run: .venv-v2/bin/python -m unittest discover -s engine/crates/dbt-adapter/tests/python -v
 
-      - name: Download pinned Redis ADBC driver
+      - name: Download latest Redis ADBC driver release
         env:
           GH_TOKEN: ${{ github.token }}
           DRIVER_VERSION: ${{ steps.sources.outputs.driver_version }}

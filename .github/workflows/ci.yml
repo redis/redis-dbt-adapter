@@ -1,9 +1,7 @@
 name: CI
 
-# Every PR and push to main: the whole project (make all, the demos, --empty)
-# on the pinned driver. Nightly, and on demand: the same against the driver's
-# latest release (or a given release or commit), so a driver change that
-# breaks the project shows up before the pin is bumped.
+# Every PR, push, nightly run and release validation uses the latest published
+# Redis ADBC driver release for the whole project, demos and adapter tests.
 on:
   workflow_call:
     inputs:
@@ -21,10 +19,6 @@ on:
   schedule:
     - cron: "17 7 * * *"
   workflow_dispatch:
-    inputs:
-      driver_version:
-        description: Driver release or commit to test (default the latest release)
-        required: false
 
 permissions:
   contents: read
@@ -147,20 +141,12 @@ jobs:
           echo UV_NO_SYNC=1 >> "$GITHUB_ENV"
 
       - name: Choose the latest driver release
-        if: inputs.wheel_artifact == '' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         env:
           GH_TOKEN: ${{ github.token }}
-          REQUESTED: ${{ inputs.driver_version }}
         run: |
           # Use REST for public cross-repository reads with the workflow token.
-          version="${REQUESTED:-$(gh api repos/redis/redis-adbc-driver/releases/latest --jq .tag_name)}"
+          version="$(gh api repos/redis/redis-adbc-driver/releases/latest --jq .tag_name)"
           echo "DRIVER_VERSION=${version}" >> "$GITHUB_ENV"
-
-      # A commit has no prebuilt driver: make driver builds it from source.
-      - uses: actions/setup-go@v7
-        if: inputs.driver_version != ''
-        with:
-          go-version: "1.26"
 
       # The public driver repository uses the workflow token for release API
       # requests; source builds clone the public repository.
@@ -272,19 +258,12 @@ jobs:
           echo UV_NO_SYNC=1 >> "$GITHUB_ENV"
 
       - name: Choose the latest driver release
-        if: inputs.wheel_artifact == '' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         env:
           GH_TOKEN: ${{ github.token }}
-          REQUESTED: ${{ inputs.driver_version }}
         run: |
           # Use REST for public cross-repository reads with the workflow token.
-          version="${REQUESTED:-$(gh api repos/redis/redis-adbc-driver/releases/latest --jq .tag_name)}"
+          version="$(gh api repos/redis/redis-adbc-driver/releases/latest --jq .tag_name)"
           echo "DRIVER_VERSION=${version}" >> "$GITHUB_ENV"
-
-      - uses: actions/setup-go@v7
-        if: inputs.driver_version != ''
-        with:
-          go-version: "1.26"
 
       # The public driver repository uses the workflow token for release API
       # requests; source builds clone the public repository.
