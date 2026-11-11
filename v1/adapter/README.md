@@ -15,7 +15,7 @@ enabled. Integration tests require a Redis Enterprise cluster with TLS and
 username/password authentication.
 
 ```shell
-python -m pip install dbt-redis-adbc==0.2.0
+python -m pip install dbt-redis-adbc==0.3.0
 ```
 
 The Python package does not include the native Redis ADBC driver. Download and

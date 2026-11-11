@@ -31,11 +31,11 @@ In a directory where you want to keep your dbt environment:
 python3.13 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install dbt-redis-adbc==0.2.0
+python -m pip install dbt-redis-adbc==0.3.0
 dbt --version
 ```
 
-The output should list `redis_adbc: 0.2.0` under plugins. The adapter's dependencies
+The output should list `redis_adbc: 0.3.0` under plugins. The adapter's dependencies
 include dbt Core 1.x, the ADBC driver manager, and PyArrow. You do not need to
 clone this repository to use the published adapter.
 
