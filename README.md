@@ -11,7 +11,7 @@ Install the published adapter in a Python 3.13 environment:
 ```sh
 python3.13 -m venv .venv
 source .venv/bin/activate
-python -m pip install dbt-redis-adbc==0.2.0
+python -m pip install dbt-redis-adbc==0.3.0
 dbt --version
 ```
 

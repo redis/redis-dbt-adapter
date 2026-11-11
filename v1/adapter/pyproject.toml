@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dbt-redis-adbc"
-version = "0.2.0"
+version = "0.3.0"
 description = "dbt adapter for Redis 8.x using the Redis ADBC driver"
 readme = "README.md"
 authors = [{ name = "Albert T. Wong" }]
