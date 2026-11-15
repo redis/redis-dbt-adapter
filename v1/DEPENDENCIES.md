@@ -8,6 +8,13 @@ Support for Python 3.11 and 3.12 has been dropped to standardize the runtime and
 remove older-Python dependency resolutions. Recreate environments with Python
 3.13 before running `uv sync --locked`.
 
+## Security updates
+
+The adapter requires `opentelemetry-api>=1.45.2`, and the example locks 1.45.2,
+to address [CVE-2026-126360](https://github.com/advisories/GHSA-mf5v-w3w3-f6cg).
+This fixes denial of service from quadratic-time parsing of malformed
+`traceparent` values in dbt's transitive OpenTelemetry dependency.
+
 ## Compatibility changes
 
 [PyArrow 26](https://arrow.apache.org/blog/2026/10/08/26.0.0-release/) drops
