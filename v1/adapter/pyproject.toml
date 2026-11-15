@@ -19,6 +19,8 @@ requires-python = ">=3.13"
 dependencies = [
     "dbt-core>=1.10,<2",
     "dbt-adapters>=1.16,<2",
+    # Security floor for dbt's trace-context parsing (CVE-2026-126360).
+    "opentelemetry-api>=1.45.2",
     "adbc-driver-manager>=1.6,<2",
     "pyarrow>=26,<27",
 ]
