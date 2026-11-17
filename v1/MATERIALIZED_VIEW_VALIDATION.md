@@ -41,6 +41,23 @@ DRIVER_VERSION=36f456a44fc1af7839e43ab5912a606ad8dadf92 make driver-build
   passed for both `"Customer ID"` and `"CamelCase"`, on both an ordinary table
   and a materialized view.
 
+## Audit of skipped array tests
+
+The full-run count above predates removal of six stale array skip markers.
+On the same driver source revision and Software endpoint, the formerly excluded
+`TestArrayAppend`, `TestArrayConcat`, and `TestArrayConstruct` classes all passed:
+**6 passed**, 4.16 seconds. These cover both dbt model builds and expected/actual
+row and column-type comparisons. No array macro or driver changes were needed.
+The six cases now run normally; the remaining configured skip count is **13**.
+This targeted result is additional validation, not a new combined full-suite run.
+
+The remaining exclusions are five general SQL-grant tests, three zero-copy
+clone cases, two Flight SQL-only cases, one incremental Python model test,
+one backslash-string-semantic test, and one unimplemented adapter
+`get_catalog_for_single_relation` API test. These do not all represent missing
+driver SQL capabilities: grants are scoped to native SELECT, Flight SQL requires
+a separate server/transport, and the catalog exclusion is an adapter API gap.
+
 ## Environment
 
 - macOS arm64; Python 3.13.16.

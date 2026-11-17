@@ -271,7 +271,6 @@ not the adapter. For example:
 Skipped, with the reason in the test:
 - general SQL privileges
 - zero-copy `dbt clone` (dbt clone creates views)
-- arrays
 - incremental Python models (Python models are tables)
 - backslash escapes (standard SQL strings, as dbt-postgres skips)
 - `get_catalog_for_single_relation`, which dbt-core never calls
@@ -342,7 +341,7 @@ materializations, so the adapter covers what isn't SQL:
 | Seed reloads | A reload without `--full-refresh` checks the CSV's columns before truncating, so a mismatch leaves the table as it was (there's no transaction to roll the `TRUNCATE` back) |
 | Loading | Seeds and the raw CSV go through Arrow bulk ingest, which is much faster than INSERTs. The driver converts each seed value to its column's type as an INSERT would, and supplies the Arrow type for each of the raw CSV's SQL column types |
 | Python models | Run in the dbt process, as dbt-duckdb runs them: Redis has no Python runtime, but the driver evaluates most SQL in the dbt process too. `dbt.ref()` and `dbt.source()` return a `pyarrow.Table` (`select * from …`, read with `fetch_arrow_table()`); `session` is the thread's ADBC DB-API connection, for running SQL. `model()` returns a pyarrow Table or RecordBatchReader, a pandas or polars DataFrame (a pandas index is dropped), or anything with the Arrow stream interface; it's bulk-ingested into the `__dbt_tmp` table, and dbt's rename swap finishes the job. The adapter's `table` materialization is dbt's, with Python added; tracebacks give the model file's line numbers. As dbt specifies, `--empty` and `--sample` don't limit a Python model's refs (sources are) |
-| Cross-database macros | dbt-core's defaults work natively except two: `safe_cast` uses the driver's `TRY_CAST`, and `listagg` with `limit_num` raises a clear error (it needs arrays). `tests/assert_cross_db_macros.sql` checks them all |
+| Cross-database macros | dbt-core's defaults work natively except two: `safe_cast` uses the driver's `TRY_CAST`, and `listagg` with `limit_num` raises a clear error (the adapter has no translation for dbt's `ARRAY_SLICE` form). `tests/assert_cross_db_macros.sql` checks them all |
 | Model contracts | An enforced contract creates the table from its DDL, then inserts the rows (as on dbt-postgres). `not_null` and `check` are enforced by the driver; `primary_key`, `unique` and `foreign_key` are accepted but not enforced (dbt warns) |
 | Small dialect bits | `?` bind parameters, `CURRENT_TIMESTAMP` (and `current_timestamp_in_utc_backcompat` in UTC, which dbt's default isn't in a non-UTC session), `validate_sql` with a query that can't return rows (the driver has no `EXPLAIN`), a subquery wrapper for `dbt show --limit`, and no alias on the subqueries `--empty` and microbatch put around refs, so a model's own alias (`from {{ ref('x') }} z`) still works |
 

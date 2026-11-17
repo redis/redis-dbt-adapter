@@ -8,11 +8,12 @@
   try_cast({{ field }} as {{ type }})
 {%- endmacro %}
 
-{#- dbt's default listagg with limit_num slices an array; the driver has no
-    arrays. Without a limit, dbt's default (LISTAGG … WITHIN GROUP) works. -#}
+{#- dbt's default limited listagg uses ARRAY_SLICE, which still needs an
+    adapter translation. Ordinary array macros work natively. Without a limit,
+    dbt's default (LISTAGG … WITHIN GROUP) works. -#}
 {% macro redis_adbc__listagg(measure, delimiter_text, order_by_clause, limit_num) -%}
   {%- if limit_num -%}
-    {{ exceptions.raise_compiler_error("dbt.listagg with limit_num isn't supported on redis_adbc: it needs arrays, which the Redis ADBC driver doesn't have. Filter the rows first, or drop the limit.") }}
+    {{ exceptions.raise_compiler_error("dbt.listagg with limit_num isn't supported on redis_adbc: dbt's ARRAY_SLICE form needs an adapter translation. Filter the rows first, or drop the limit.") }}
   {%- endif -%}
   {{ return(default__listagg(measure, delimiter_text, order_by_clause, limit_num)) }}
 {%- endmacro %}

@@ -28,8 +28,8 @@ class RedisColumnTypes:
 
     @pytest.fixture
     def data_types(self, schema_int_type, int_type, string_type):
-        # sql_column_value, schema_data_type, error_data_type. The driver has
-        # no arrays, and JSON is text (its JSON functions take strings).
+        # sql_column_value, schema_data_type, error_data_type. These fixtures
+        # exercise the scalar contract declarations below.
         return [
             ["1", schema_int_type, int_type],
             ["'1'", string_type, string_type],
