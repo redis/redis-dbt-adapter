@@ -132,7 +132,8 @@ UNIQUE indexes are rejected. The SQL requires driver v0.0.20+, with the lifecycl
 validated on v0.0.27. Driver v0.0.23+ rejects earlier storage catalogs; use a fresh
 isolated driver database or a supported import path when upgrading. Refresh and
 rename swaps autocommit and do not promise PostgreSQL transaction or uninterrupted
-concurrent-reader semantics. Index columns containing spaces remain unsupported
+concurrent-reader semantics. Index columns containing spaces require driver
+source commit `41d468d` or later; released v0.0.27 rejects them
 ([driver #449](https://github.com/redis/redis-adbc-driver/issues/449)). See the
 [materialized-view guide](https://github.com/redis/redis-dbt-adapter/blob/main/v1/README.md#materialized-views).
 

@@ -4,6 +4,43 @@ Validated November 16, 2026 (America/Los_Angeles) for
 [adapter issue #39](https://github.com/redis/redis-dbt-adapter/issues/39),
 starting from adapter commit `2f686af` with the accompanying implementation.
 
+## Driver source revalidation
+
+Built native driver main commit
+`36f456a44fc1af7839e43ab5912a606ad8dadf92` from source on November 16, 2026,
+using Go **1.27.3**, macOS arm64, and the same locked Python runtime and verified
+Redis Software environment described below. The adapter revision before this
+validation update was `a472887`.
+
+The source includes native catalog-write coordination
+([driver PR #451](https://github.com/redis/redis-adbc-driver/pull/451)) and quoted
+index column support
+([driver PR #450](https://github.com/redis/redis-adbc-driver/pull/450)). These
+results qualify that exact source build, independently of released v0.0.27.
+ADBC GetInfo confirmed the full driver commit and Redis **8.8.0**. The built
+library SHA-256 is
+`7b77c2834e7d897c6ef54b967ab7d4fb71a69ea5179ce93267673f04ff693c93`.
+Before the run, the management API reconfirmed three active shards, active
+4× QPF, six Search workers, mnp routing, 32 connections, and noeviction.
+
+```sh
+cd v1
+DRIVER_VERSION=36f456a44fc1af7839e43ab5912a606ad8dadf92 make driver-build
+# Configure the dedicated authenticated TLS Software endpoint and trusted CA.
+.venv/bin/python -m pytest adapter/tests/functional -n 4 -q
+```
+
+- Native build: passed.
+- **Full parallel adapter suite: 194 passed, 19 skipped, zero failures/errors**,
+  151.86 seconds. This includes all four materialized-view functional tests.
+  The prior store-failures audit-schema teardown error did not recur.
+- Strict MkDocs build and `git diff --check`: passed.
+- Original native independent-table reproduction: **0 failures in 40 CTAS
+  attempts** across two connections, with no adapter retries involved.
+- Sequential native quoted-index reproduction: index creation and indexed reads
+  passed for both `"Customer ID"` and `"CamelCase"`, on both an ordinary table
+  and a materialized view.
+
 ## Environment
 
 - macOS arm64; Python 3.13.16.

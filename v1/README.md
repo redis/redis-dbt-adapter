@@ -371,7 +371,8 @@ group by customer_id
   optional `type` (`btree` or `hash`, Redis Search compatibility hints), and
   optional `unique: false`. UNIQUE, expression, and partial indexes are rejected.
   Multiple indexes and quoted mixed-case column names are supported. The
-  current driver rejects index columns containing spaces; see
+  released v0.0.27 driver rejects index columns containing spaces. Source
+  commit `41d468d` adds support; see
   [driver #449](https://github.com/redis/redis-adbc-driver/issues/449).
 - Index configuration changes use `on_configuration_change`: `apply` (default)
   adds/removes the materialization's named indexes and refreshes; `continue`
@@ -401,8 +402,9 @@ compatibility. Driver reader-consistency work is tracked separately in
 The original qualification on adapter base `2f686af` encountered v0.0.27
 catalog-publication conflicts; see
 [driver #448](https://github.com/redis/redis-adbc-driver/issues/448). The adapter
-now includes safe publication retries. The validation record distinguishes
-the original results from checks after integration with current `main`.
+now includes safe publication retries, and driver source commit `36f456a` adds
+native catalog-write coordination. The validation record distinguishes the
+original v0.0.27 results from source-build revalidation.
 
 See [recorded validation](MATERIALIZED_VIEW_VALIDATION.md) for the native dbt
 build, test, catalog, and failure-recovery results on Redis Software with 4× QPF.
