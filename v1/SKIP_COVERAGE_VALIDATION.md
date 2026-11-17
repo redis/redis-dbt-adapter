@@ -77,6 +77,11 @@ For local management overrides, supply `REDIS_RBAC_API_URL`,
 `REDIS_RBAC_API_CA_FILE`. `REDIS_ADBC_CLI` can identify a matching driver CLI;
 otherwise the fixture downloads and verifies the resolved release's archive.
 Do not run two RBAC provisioning suites against the same cluster concurrently.
+For source qualification, resolve and record an immutable driver SHA, build
+with `DRIVER_VERSION=<sha> make driver-build`, and build its matching CLI with
+`make -C build/redis-adbc-driver/go adbc-cli VERSION=<sha>`. Set
+`REDIS_ADBC_CLI` to that checkout's `go/build/redis-adbc` executable. Run native,
+RBAC, oldest-runtime and Flight qualification serially on a shared backend.
 
 Authenticated Flight qualification uses the public builder and workflow in
 `.github/workflows/flight-sql.yml`:
@@ -97,7 +102,7 @@ REDIS_ADBC_TRANSPORT=flightsql .venv/bin/python -m pytest adapter/tests/function
 
 The server's committed source revision is
 `4d91e37135080be7f0eeb770fc89fa7adeb14bc8`; the helper independently resolves
-and records the driver release on each build. No private feature composition or
+and records the resolved driver revision on each build. No private feature composition or
 unpublished security implementation is required. Credentials, private keys,
 endpoints and raw operational logs are not published.
 
@@ -111,11 +116,13 @@ and 32 connections. Both management and data certificates were verified.
 | Scope | Result |
 | --- | --- |
 | Native full functional suite, latest source `640dbf1` | 228 passed, 3 Flight-only skips, zero failures/errors (139.75 s) |
-| Native SELECT grants, latest source `640dbf1` | Final rerun in progress; earlier v0.0.27 run: 5 passed including teardown |
+| Native SELECT grants, latest source `640dbf1` | 5 passed, including build/tests/catalog, real reader access and teardown (90.60 s) |
+| Latest-source Flight full suite | 227 passed, 4 native-only skips, zero failures/errors (189.43 s) |
+| Latest-source focused Flight transport/security | 9 passed, zero skips/failures/errors (6.68 s) |
 | Earlier public authenticated Flight full suite, v0.0.27 | 227 passed, 4 skipped, zero failures/errors (220.53 s) |
 | Earlier focused Flight transport/security, v0.0.27 | 9 passed, zero skips (18.99 s) |
 | Unit tests, including management conflict/unknown-outcome regression | 44 passed |
-| Oldest supported dbt runtime | Pending final cleanup check |
+| Oldest supported dbt runtime, latest driver source | Seed/build, Python incremental rerun/full refresh, docs, single/missing catalog API, self-target clone, tests and cleanup passed |
 | Strict MkDocs build and whitespace checks | Passed |
 
 The native locked runtime uses Python 3.13.16, dbt Core 1.12.6,
@@ -131,6 +138,8 @@ native library SHA-256 is
 The matching CLI is built from the same checkout. The public Flight executable
 is rebuilt against that source driver (`v0.0.0-20261117055145-640dbf1fa880`),
 SHA-256 `ae5abf16cd94aa4d2447d426d5c9a54cabc8beacfd6bc66626de359add86e888`.
+After the source grants suite, verified management API reads confirmed zero
+owned test users, roles and ACLs remain.
 The helper accepts `--driver-ref` and the workflow accepts the equivalent manual
 input, while their default remains latest stable.
 
@@ -151,6 +160,8 @@ replay rule was added to suppress these errors.
 
 These results qualify the recorded tuples; the hosted workflow rebuilds and retains its
 own provenance and JUnit results. Local results do not imply hosted CI success.
+The disposable local Flight server was stopped after qualification. The native
+SELECT fixtures and oldest-runtime schema were removed successfully.
 
 ### Skip accounting and upstream scope
 

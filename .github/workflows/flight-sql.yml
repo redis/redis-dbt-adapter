@@ -46,7 +46,7 @@ jobs:
       - uses: astral-sh/setup-uv@v10.2.0
         with:
           python-version: "3.13"
-      - name: Build Flight with the latest stable Redis driver
+      - name: Build Flight and record the resolved Redis driver
         env:
           GH_TOKEN: ${{ github.token }}
           DRIVER_REF: ${{ inputs.driver_ref }}
