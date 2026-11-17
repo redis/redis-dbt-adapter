@@ -37,6 +37,7 @@ validation:
 nav:
   - Overview: README.md
   - Installation: docs/INSTALLATION.md
+  - Integration status: docs/integration-status.md
   - dbt Core:
       - NYC taxi example: v1/README.md
       - Adapter configuration: v1/adapter/README.md

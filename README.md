@@ -30,6 +30,12 @@ projects, and test resources.
 | [`v1/`](v1/README.md) | Python `dbt-redis-adbc` adapter, NYC taxi example, driver tooling, and functional tests | Supports dbt Core 1.10 and later 1.x releases; the example requires 1.10.8+ |
 | [`v2/`](v2/README.md) | Native v2 fixtures, taxi validation, and tooling | Experimental fork: smoke and v1 feature scenarios pass on macOS and Linux; requires a custom engine |
 
+See [integration status and remaining work](docs/integration-status.md) for
+version-specific evidence, the dbt v2 upstream contribution checklist, and the
+remaining Flight SQL qualification work tracked by [issue #40](https://github.com/redis/redis-dbt-adapter/issues/40).
+The adapter originated as a community project; its move to the Redis GitHub
+organization does not by itself establish Redis, Inc. maintenance or support.
+
 ## Run the v1 example
 
 All integration tests use a dedicated Redis Enterprise cluster with TLS and

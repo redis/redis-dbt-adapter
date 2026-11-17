@@ -4,6 +4,10 @@ A dbt Core adapter for Redis 8.x, built on the
 [Redis ADBC driver](https://github.com/redis/redis-adbc-driver).
 Compatible with dbt Core 1.10 and later 1.x releases.
 
+This community-origin adapter supports direct Redis ADBC and a separate v1
+Flight SQL transport. See the [integration status and evidence](../../docs/integration-status.md)
+for validation limits, the experimental dbt v2 fork, and maintenance/support scope.
+
 **[Complete installation and first-model guide](https://github.com/redis/redis-dbt-adapter/blob/main/docs/INSTALLATION.md)**
 covers Python installation, native driver download and checksum verification,
 TLS configuration, a dbt profile, and your first model.
