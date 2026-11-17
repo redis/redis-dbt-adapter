@@ -7,6 +7,8 @@ metadata through ADBC GetObjects, and fast bulk loading through ADBC ingest.
 Python models run in the dbt process, over Arrow.
 """
 
+import hashlib
+import json
 import re
 import traceback
 from dataclasses import dataclass, field
@@ -19,7 +21,7 @@ import pyarrow.compute as pc
 import pyarrow.csv as pacsv
 import sqlparse
 from dbt_common.clients.agate_helper import table_from_rows
-from dbt_common.exceptions import DbtRuntimeError
+from dbt_common.exceptions import CompilationError, DbtRuntimeError
 
 from dbt.adapters.base import BaseRelation, available
 from dbt.adapters.base.impl import ConstraintSupport, log_code_execution
@@ -124,7 +126,7 @@ class RedisAdbcRelation(BaseRelation):
     # Render `schema.table`: the driver has a single catalog ("redis").
     include_policy: Policy = field(default_factory=lambda: Policy(database=False, schema=True, identifier=True))
     quote_policy: Policy = field(default_factory=lambda: Policy(database=False, schema=False, identifier=False))
-    renameable_relations: FrozenSet = frozenset({RelationType.Table, RelationType.View})
+    renameable_relations: FrozenSet = frozenset({RelationType.Table, RelationType.View, RelationType.MaterializedView})
     replaceable_relations: FrozenSet = frozenset({RelationType.View})
     # `--empty` and microbatch wrap each ref in a subquery. Leave it unaliased
     # (the driver accepts that) so a model's own alias, as in
@@ -171,6 +173,98 @@ class RedisAdbcAdapter(SQLAdapter):
     @classmethod
     def date_function(cls) -> str:
         return "current_timestamp"
+
+    @available
+    def redis_mv_indexes(self, indexes: Any) -> Dict[str, dict]:
+        """Validate before hooks or DDL, including refresh-only runs."""
+        if not isinstance(indexes, list):
+            raise CompilationError("Redis indexes must be a list of dictionaries")
+        result = {}
+        for index in indexes:
+            if not isinstance(index, dict):
+                raise CompilationError("Redis indexes must be dictionaries")
+            if index.get("unique", False) is not False:
+                raise CompilationError("UNIQUE indexes are not supported on Redis")
+            if set(index) - {"columns", "type", "unique"}:
+                raise CompilationError("Redis indexes support only columns, type and unique=false; expression and partial indexes are unsupported")
+            columns = index.get("columns")
+            if (not isinstance(columns, list) or not columns
+                    or any(not isinstance(c, str) or not c for c in columns)):
+                raise CompilationError("Redis index columns must be a non-empty list of column names")
+            method = index.get("type", "btree")
+            if method not in ("btree", "hash"):
+                raise CompilationError("Redis index type must be btree or hash (Redis Search compatibility hints)")
+            normalized = {"columns": columns, "type": method}
+            digest = hashlib.sha256(json.dumps(normalized, sort_keys=True).encode()).hexdigest()[:24]
+            result[digest] = normalized
+        return result
+
+    @available
+    def redis_mv_index_changes(
+        self, relation: BaseRelation, indexes: Dict[str, dict], invocation_id: str
+    ) -> Dict[str, List[str]]:
+        """Reconcile only this materialization's named indexes, leaving external
+        indexes alone. Build-specific names avoid collisions during replacement.
+        The config digest survives relation renames and makes refresh idempotent.
+        """
+        current = {}
+        with self.connections.exception_handler("materialized view indexes"):
+            with self._adbc().cursor() as cur:
+                cur.execute(
+                    "select indexname from pg_indexes where schemaname = ? and tablename = ?",
+                    (relation.schema, relation.identifier),
+                )
+                for (name,) in cur.fetchall():
+                    match = re.fullmatch(r"dbt_mv_([0-9a-f]{24})_[0-9a-f]{24}", name)
+                    if match:
+                        current.setdefault(match.group(1), []).append(name)
+        quote = lambda value: '"' + value.replace('"', '""') + '"'
+        scope = hashlib.sha256(json.dumps([relation.schema, relation.identifier, invocation_id]).encode()).hexdigest()[:24]
+        create, drop = [], []
+        for digest, index in indexes.items():
+            if digest not in current:
+                name = f"dbt_mv_{digest}_{scope}"
+                columns = ", ".join(quote(c) for c in index["columns"])
+                create.append(f"create index {quote(name)} on {relation} using {index['type']} ({columns})")
+        for digest, names in current.items():
+            if digest not in indexes:
+                drop.extend(f"drop index if exists {quote(relation.schema)}.{quote(name)}" for name in names)
+        return {"create": create, "drop": drop}
+
+    @available
+    def redis_index_sql(self, relation, index_dict, invocation_id: str) -> str:
+        """Create a named index, scoped to this build so rename swaps cannot
+        collide with the previous target's schema-wide index names."""
+        def invalid(reason):
+            raise CompilationError(f"Invalid Redis indexes config: {reason}")
+
+        if not isinstance(index_dict, dict):
+            invalid("each index must be a dictionary")
+        if index_dict.get("unique", False) is not False:
+            invalid("UNIQUE indexes are not supported")
+        unsupported = set(index_dict) - {"columns", "type", "unique"}
+        if unsupported:
+            invalid("unsupported options " + ", ".join(sorted(unsupported)) +
+                    "; expression and partial indexes are not supported")
+        columns = index_dict.get("columns")
+        if (not isinstance(columns, list) or not columns
+                or any(not isinstance(c, str) or not c for c in columns)):
+            invalid("columns must be a non-empty list of column names")
+        method = index_dict.get("type", "btree")
+        if method not in ("btree", "hash"):
+            invalid("type must be 'btree' or 'hash' (Redis Search compatibility hints)")
+        existing = {c.name for c in self.get_columns_in_relation(relation)}
+        if any(c not in existing for c in columns):
+            invalid("columns must name existing columns exactly; expression indexes are not supported")
+        # Include invocation_id: the old target still owns its names while
+        # indexes are created on __dbt_tmp. Table drop cleans up those names.
+        identity = json.dumps([relation.schema, relation.identifier, columns, method, invocation_id])
+        name = "dbt_idx_" + hashlib.sha256(identity.encode()).hexdigest()[:32]
+        def quote(value):
+            return '"' + value.replace('"', '""') + '"'
+
+        return (f"create index if not exists {quote(name)} on {relation} "
+                f"using {method} ({', '.join(quote(c) for c in columns)})")
 
     # --- type conversion for seeds -------------------------------------------------
 
@@ -290,7 +384,9 @@ class RedisAdbcAdapter(SQLAdapter):
                             database=cat["catalog_name"],
                             schema=s["db_schema_name"],
                             identifier=t["table_name"],
-                            type=RelationType.View if t["table_type"] == "VIEW" else RelationType.Table,
+                            type={"VIEW": RelationType.View, "MATERIALIZED VIEW": RelationType.MaterializedView}.get(
+                                t["table_type"], RelationType.Table
+                            ),
                         )
                     )
         return relations
@@ -381,7 +477,7 @@ class RedisAdbcAdapter(SQLAdapter):
                                     cat["catalog_name"],
                                     s["db_schema_name"],
                                     t["table_name"],
-                                    "VIEW" if t["table_type"] == "VIEW" else "BASE TABLE",
+                                    t["table_type"] if t["table_type"] in ("VIEW", "MATERIALIZED VIEW") else "BASE TABLE",
                                     comments.get(t["table_name"]),
                                     c["column_name"],
                                     c["ordinal_position"],

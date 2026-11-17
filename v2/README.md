@@ -160,7 +160,11 @@ RUST_LOG=trace python3 v2/taxi.py --dbt /absolute/path/to/dbt-v2 \
 
 Use the latest stable Redis ADBC release from `redis/redis-adbc-driver`.
 The current candidate was qualified with v0.0.27, including enforced primary
-key, unique, and foreign key constraints; record the release resolved for each run. Build the engine with its default
+key, unique, and foreign key constraints; record the release resolved for each run.
+Upgrades from older driver storage formats require a fresh, isolated Redis
+database and reloading the data; there is no automatic storage migration.
+Historical results in `VALIDATION.md` retain their actual versions.
+Build the engine with its default
 features (`cargo build -p dbt-sa-cli`) so docs generation has the embedded UI.
 For a JSON warehouse catalog, request `dbt build --write-catalog`; v2's docs
 command exports its index and does not always produce the legacy JSON catalog.

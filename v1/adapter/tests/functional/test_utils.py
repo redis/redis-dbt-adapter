@@ -159,8 +159,8 @@ class TestLength(BaseLength):
 
 
 class TestListagg(BaseListagg):
-    # Without the limit_num case: that needs arrays, so the adapter refuses
-    # it with a clear error (macros/cross_db.sql).
+    # The limit_num path uses dbt's ARRAY_SLICE form, which still needs an
+    # adapter translation (macros/cross_db.sql).
     @pytest.fixture(scope="class")
     def seeds(self):
         expected = fixture_listagg.seeds__data_listagg_output_csv.splitlines(keepends=True)
@@ -237,20 +237,14 @@ class TestCalculateFreshnessMethod(BaseCalculateFreshnessMethod):
     pass
 
 
-NO_ARRAYS = pytest.mark.skip(reason="the Redis ADBC driver has no arrays")
-
-
-@NO_ARRAYS
 class TestArrayAppend(BaseArrayAppend):
     pass
 
 
-@NO_ARRAYS
 class TestArrayConcat(BaseArrayConcat):
     pass
 
 
-@NO_ARRAYS
 class TestArrayConstruct(BaseArrayConstruct):
     pass
 

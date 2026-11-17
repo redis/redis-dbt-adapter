@@ -7,11 +7,8 @@ from dbt.tests.adapter.grants.test_invalid_grants import BaseInvalidGrants
 from dbt.tests.adapter.grants.test_model_grants import BaseModelGrants
 from dbt.tests.adapter.grants.test_seed_grants import BaseSeedGrants
 from dbt.tests.adapter.grants.test_snapshot_grants import BaseSnapshotGrants
-from dbt.tests.adapter.materialized_view.basic import MaterializedViewBasic
-from dbt.tests.adapter.materialized_view.changes import MaterializedViewChanges
 
 NO_GRANTS = pytest.mark.skip(reason="General grants suite requires unsupported privileges/objects; opt-in native SELECT RBAC has a separate integration test")
-NO_MATERIALIZED_VIEWS = pytest.mark.skip(reason="Redis has no materialized views")
 
 
 @NO_GRANTS
@@ -37,14 +34,3 @@ class TestSnapshotGrants(BaseSnapshotGrants):
 @NO_GRANTS
 class TestInvalidGrants(BaseInvalidGrants):
     pass
-
-
-@NO_MATERIALIZED_VIEWS
-class TestMaterializedViewBasic(MaterializedViewBasic):
-    pass
-
-
-@NO_MATERIALIZED_VIEWS
-class TestMaterializedViewChanges(MaterializedViewChanges):
-    pass
-

@@ -43,6 +43,7 @@ nav:
       - NYC taxi example: v1/README.md
       - Adapter configuration: v1/adapter/README.md
       - Package compatibility: v1/redis_adbc_utils/README.md
+      - Materialized-view validation: v1/MATERIALIZED_VIEW_VALIDATION.md
       - Flight SQL validation: v1/FLIGHT_SQL_VALIDATION.md
   - Native dbt v2:
       - Setup and usage: v2/README.md
