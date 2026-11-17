@@ -59,6 +59,25 @@ using one dbt thread and a dedicated schema:
 5. `dbt docs generate`.
 6. `dbt run-operation cleanup` (drop the dedicated schema).
 
+## Validation after rebasing onto current main
+
+Rebased onto adapter `0f762e4` (which includes the safe publication retries
+from PR #44), retaining the official native v0.0.27 library and the same verified
+Software instance. `uv sync --locked` installed adapter 0.3.1 with the updated
+OpenTelemetry security floor.
+
+- Focused materialized-view suite: **4 passed**, 13.36 seconds.
+- Full `pytest adapter/tests/functional -n 4 -q`: **194 passed, 19 skipped,
+  1 teardown error**, 376.43 seconds. The error was unrelated to materialized
+  views: `TestStoreTestFailures.test__store_and_assert` passed its test body,
+  but dropping its audit schema exhausted the publication retries and returned
+  the same SQLSTATE `40001` tracked in driver #448. This is not a clean full-suite
+  result and does not resolve that driver issue.
+- Isolated rerun of the errored store-failures test: **1 passed**, 21.38 seconds,
+  including teardown. The full parallel run remains recorded as errored.
+- GitHub's adapter-test job for PR #50 at `fc427bb` passed on its CI environment.
+- Strict MkDocs build and `git diff --check` passed.
+
 ## Historical broader-suite failures before adapter publication retries
 
 | Command | Result |
