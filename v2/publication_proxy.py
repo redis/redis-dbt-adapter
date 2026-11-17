@@ -6,12 +6,20 @@ successful seal makes the driver exhaust its own rebase attempts and emit the
 real refused-publication error. No SQL or Flight error is fabricated.
 """
 import contextlib
+import re
 import socket
 import socketserver
 import ssl
 import threading
 import time
 from urllib.parse import urlsplit
+
+
+def ssl_enum(value):
+    """Keep only bounded OpenSSL symbolic identifiers, never exception text."""
+    if value is None:
+        return None
+    return value if isinstance(value, str) and re.fullmatch(r'[A-Z][A-Z0-9_]{0,79}', value) else 'UNKNOWN'
 
 
 def read_frame(stream):
@@ -123,8 +131,32 @@ class PublicationProxy(socketserver.ThreadingTCPServer):
         self.connections = set()
         self.lock = threading.Lock()
         self.errors = []
+        self.phase = 'startup'
         super().__init__(('127.0.0.1', 0), _Handler)
         self.uri = f'rediss://127.0.0.1:{self.server_address[1]}{parsed.path}'
+
+    def set_phase(self, phase):
+        with self.lock:
+            self.phase = phase
+
+    def record_error(self, error, stage):
+        # Do not retain str(error), args, RESP data, addresses or certificates.
+        with self.lock:
+            entry = {'type': type(error).__name__, 'phase': self.phase, 'stage': stage}
+            if isinstance(error, ssl.SSLError):
+                entry.update(ssl_library=ssl_enum(getattr(error, 'library', None)),
+                             ssl_reason=ssl_enum(getattr(error, 'reason', None)),
+                             ssl_errno=error.errno)
+            self.errors.append(entry)
+
+    def error_receipt(self):
+        with self.lock:
+            return [dict(entry) for entry in self.errors]
+
+    def check_errors(self):
+        errors = self.error_receipt()
+        if errors:
+            raise RuntimeError('Publication proxy encountered protocol errors: ' + str(errors))
 
     def __enter__(self):
         self.thread = threading.Thread(target=self.serve_forever, daemon=True)
@@ -146,23 +178,34 @@ class _Handler(socketserver.BaseRequestHandler):
     def handle(self):
         proxy = self.server
         self.request.settimeout(30)
+        stage = 'front-handshake'
         try:
             with proxy.front_tls.wrap_socket(self.request, server_side=True) as client:
-                with proxy.backend_tls.wrap_socket(socket.create_connection(proxy.backend, timeout=30),
-                                                   server_hostname=proxy.backend[0]) as backend:
+                stage = 'backend-connect'
+                with socket.create_connection(proxy.backend, timeout=30) as raw_backend:
+                    stage = 'backend-handshake'
+                    backend = proxy.backend_tls.wrap_socket(raw_backend, server_hostname=proxy.backend[0])
+                with backend:
                     with proxy.lock:
                         proxy.connections.update((client, backend))
                     try:
                         with client.makefile('rb') as requests, backend.makefile('rb') as replies:
                             while True:
+                                stage = 'client-read'
                                 args = read_command(requests)
+                                stage = 'publication-select'
                                 refuse = proxy.gate.select(args)
+                                stage = 'backend-write'
                                 backend.sendall(command_frame(args))
+                                stage = 'backend-read'
                                 reply = read_frame(replies)
                                 # RESP3 attributes decorate the next response.
                                 while reply.startswith(b'|'):
+                                    stage = 'client-write-attribute'
                                     client.sendall(reply)
+                                    stage = 'backend-read'
                                     reply = read_frame(replies)
+                                stage = 'client-write'
                                 client.sendall(proxy.gate.record(reply) if refuse else reply)
                     finally:
                         with proxy.lock:
@@ -170,6 +213,4 @@ class _Handler(socketserver.BaseRequestHandler):
         except (EOFError, ConnectionError, TimeoutError):
             pass
         except Exception as error:
-            # Retain only the error class: commands can contain credentials.
-            with proxy.lock:
-                proxy.errors.append(type(error).__name__)
+            proxy.record_error(error, stage)
