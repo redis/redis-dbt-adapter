@@ -48,7 +48,7 @@ dbt  ──►  dbt-redis-adbc (adapter/)  ──►  adbc_driver_manager  ─�
 You need a dedicated Redis Enterprise cluster with TLS and username/password
 authentication, [uv](https://docs.astral.sh/uv/) (it provides Python
 3.14 for dbt), and network access to hub.getdbt.com for `dbt deps`.
-Building the driver from source also needs Go 1.26.6 or newer and a C
+Building the driver from source also needs Go 1.27.4 or newer and a C
 toolchain; on macOS arm64 and Linux (x86-64, arm64) the prebuilt one is used.
 The driver's repo, [redis/redis-adbc-driver](https://github.com/redis/redis-adbc-driver),
 is public. Releases download through the [GitHub CLI](https://cli.github.com/)

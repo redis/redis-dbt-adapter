@@ -448,15 +448,12 @@ class RedisAdbcAdapter(SQLAdapter):
     def _table_comments(self, schema: str) -> Dict[str, Optional[str]]:
         # GetObjects has column remarks but no table remarks.
         with self.connections.exception_handler("table comments"):
-            cur = self._adbc().cursor()
-            try:
+            with self._adbc().cursor() as cur:
                 cur.execute(
                     "select table_name, comment from information_schema.tables where table_schema = ?",
                     (schema,),
                 )
                 return dict(cur.fetchall())
-            finally:
-                cur.close()
 
     def valid_incremental_strategies(self):
         return ["append", "delete+insert", "merge", "microbatch"]
@@ -551,12 +548,9 @@ class RedisAdbcAdapter(SQLAdapter):
         def load_df(relation_name: str) -> pa.Table:
             # A relation, or (for a source under --empty or --sample) a
             # subquery.
-            cur = handle.cursor()
-            try:
+            with handle.cursor() as cur:
                 cur.execute(f"select * from {relation_name}")
                 return cur.fetch_arrow_table()
-            finally:
-                cur.close()
 
         namespace: Dict[str, Any] = {"__name__": parsed_model["unique_id"]}
         with self.connections.exception_handler(f"Python model {parsed_model['unique_id']}"):
@@ -600,11 +594,8 @@ class RedisAdbcAdapter(SQLAdapter):
                         )
 
                 table = pa.RecordBatchReader.from_batches(reader.schema, batches())
-            cur = self.connections.get_thread_connection().handle.cursor()
-            try:
+            with self.connections.get_thread_connection().handle.cursor() as cur:
                 return cur.adbc_ingest(relation.identifier, table, mode=mode, db_schema_name=relation.schema)
-            finally:
-                cur.close()
 
     @available
     def load_csv_file(

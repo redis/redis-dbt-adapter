@@ -30,4 +30,4 @@ dbt-redis-adbc = { path = "adapter", editable = true }
 testpaths = ["adapter/tests/functional"]
 addopts = "--strict-markers"
 # The suite's own fixtures, not ours.
-filterwarnings = ["ignore:Class-scoped fixture defined as instance method:pytest.PytestRemovedIn10Warning"]
+filterwarnings = ["ignore:Class-scoped fixtures? defined as instance methods?:pytest.PytestRemovedIn10Warning"]

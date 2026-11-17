@@ -9,7 +9,7 @@
 # Releases have builds for macOS arm64, Linux x86-64 and Linux arm64. When
 # there's none for this platform or version (another OS, or DRIVER_VERSION set
 # to a commit), this builds the driver from source instead
-# (scripts/build_driver.sh, which needs Go 1.26+ and a C toolchain).
+# (scripts/build_driver.sh, which needs Go 1.27.4+ and a C toolchain).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -40,7 +40,7 @@ if [ -z "${DRIVER_RELEASES}" ] && command -v gh >/dev/null && gh auth status >/d
   if ! gh release download "${DRIVER_VERSION}" --repo "${DRIVER_GH_REPO}" --dir "${TMP}" \
     --pattern "${NAME}.tar.gz" --pattern "${NAME}.tar.gz.sha256" 2>"${TMP}/gh.log"; then
     case "$(cat "${TMP}/gh.log")" in
-      *"release not found"* | *"no assets match"*)
+      *"release not found"* | *"no assets match"* | *"no assets to download"*)
         build_instead "No prebuilt driver ${NAME} in ${DRIVER_GH_REPO} (is ${DRIVER_VERSION} a release?)" ;;
       *) cat "${TMP}/gh.log" >&2; exit 1 ;;
     esac
