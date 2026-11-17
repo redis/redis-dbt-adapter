@@ -125,6 +125,9 @@ expands seed bindings into SQL literals, so it uses the default `%s` macro
 placeholder instead of the driver's native prepared-statement `?` placeholder.
 
 See the [implementation checklist](IMPLEMENTATION.md) for remaining work.
+The [integration status](../docs/integration-status.md) separates the historical
+fork validation from upstream contribution work and tracks the unverified
+Flight SQL path under issue #40.
 
 ## Feature-parity checks
 

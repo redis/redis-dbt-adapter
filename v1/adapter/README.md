@@ -4,6 +4,11 @@ A dbt Core adapter for Redis 8.x, built on the
 [Redis ADBC driver](https://github.com/redis/redis-adbc-driver).
 Compatible with dbt Core 1.10 and later 1.x releases.
 
+This community-origin adapter loads the native Redis driver directly. Its
+validation does not establish dbt v2 or Flight SQL compatibility; see the
+[integration status and evidence](../../docs/integration-status.md) for those
+separate paths and the project's maintenance/support scope.
+
 ## Install
 
 Requires Python 3.13 or later (PyArrow 26+) and Redis 8.x with the Query Engine (Search)
