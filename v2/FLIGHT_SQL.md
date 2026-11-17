@@ -90,7 +90,10 @@ results are drained without retaining rows, preserving connection-local state.
 Redis information-schema declarations supplement physical Arrow table schemas
 for exact VARCHAR lengths and temporal/decimal types; docs/catalog already use
 Redis metadata. [Driver #453](https://github.com/redis/redis-adbc-driver/issues/453)
-tracks improving the upstream Arrow metadata.
+was resolved by [driver PR #454](https://github.com/redis/redis-adbc-driver/pull/454),
+merged at `3671fca7894240551d19aeb196d7b7362f8869d2` after the recorded
+qualification. The compatibility lookup remains for older drivers; the receipts
+retain the actual pre-fix driver revision and do not qualify that new commit.
 
 ## Reproduce qualification
 
