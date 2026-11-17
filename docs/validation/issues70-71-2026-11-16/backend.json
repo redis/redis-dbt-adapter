@@ -1,0 +1,14 @@
+{
+  "redis_info": [
+    "redis_version:8.6.2",
+    "redis_mode:standalone"
+  ],
+  "image": "redislabs/redis:8.2.0-78.18",
+  "shards_count": 3,
+  "tls_mode": "enabled",
+  "query_performance_factor": {
+    "active": true,
+    "scaling_factor": 4
+  },
+  "topology_verified": true
+}

@@ -1,0 +1,1 @@
+Native Flight security passed: authenticated TLS, rejected credentials, untrusted certificate, no-fetch session preservation, bounded cancellation, and subsequent recovery.
