@@ -1,0 +1,9 @@
+Pinned merged engine already contains Flight SQL; no patch applied.
+Applied experimental Flight engine patch. Build and qualify before use.
+Flight engine patch is already applied.
+Verified taxi build results: 1
+Verified taxi build results: 1
+----------------------------------------------------------------------
+Ran 42 tests in 1.366s
+
+OK

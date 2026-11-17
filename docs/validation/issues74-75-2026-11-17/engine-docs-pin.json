@@ -1,0 +1,11 @@
+{
+  "merged_engine_docs_commit": "1988196900588c1be955b7b0cc87cd956fa47539",
+  "previous_qualified_engine_commit": "3f285a37312c6ccab44a16b71d831c49e35417bd",
+  "changed_files": [
+    "crates/dbt-auth/AGENTS.md",
+    "crates/dbt-auth/README.md"
+  ],
+  "qualified_engine_source_files_unchanged": true,
+  "engine_pull_request": "https://github.com/alberttwong/dbt/pull/5",
+  "human_auth_code_verification_claimed": false
+}

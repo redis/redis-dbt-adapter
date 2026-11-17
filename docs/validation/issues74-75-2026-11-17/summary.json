@@ -1,0 +1,26 @@
+{
+  "status": "passed",
+  "execution_actor": "automation",
+  "human_approval_claimed": false,
+  "stale_marker": "actionable failure in 2.23 seconds",
+  "fresh_fixture_and_verified_reuse": "passed",
+  "native_and_flight_auth": "passed",
+  "script_tests": 14,
+  "v2_tests": 42,
+  "engine_auth_tests": 9,
+  "engine_auth_tests_ignored": 1,
+  "engine_profile_tests": 3,
+  "logs": {
+    "auth-live/flightsql/cancellation.log": "e84e09cfbd4f69e015d164db8b04694b99017330a17db1d31ee9ffbd2a8fc45a",
+    "auth-live/flightsql/security.log": "e57f40600ac0c4f1ba78b8220a69a72e156c63146b0556dfdbce39d7ef3b4e19",
+    "auth-live/redis/cancellation.log": "ff789f7f45f9f1aafc184b7b46ea1456904f107256f9f67e70319ceb22948030",
+    "auth-live/redis/security.log": "67d56825ab493cbc76f5f9e6f5dfeb4af72ee04eab0e3768330980178bdcbc1a",
+    "auth-live/server.log": "68de1d7b45350bc862044167e6859d5678feeb58c4b2e1c27958812f8b97f187",
+    "engine-auth-tests.log": "af937651d873295ed994ea0f580b66459a2a71ff53df884e3a43985ec8165864",
+    "engine-profile-tests.log": "0988d72d0bc56ca4a449e3a84baa28fbadd8cb8b409be096d4f2b19d500c1324",
+    "fresh-fixture.log": "3daedd5c20d410fa5d1975f9a792c333293a5f7fc8bbcfe0a560a59d817e4508",
+    "script-tests.log": "d49d81a7b6622a7450b45188dddd4cc6ffa24e0c6bd674c4fae85ab6df48ceb1",
+    "stale-fixture.log": "0cf6160d582e59cca07043a84e03f3975e64be1eacc0bf44fb6fb7b2ba6aa93e",
+    "v2-tests.log": "2172ec0f7ace5a6d565baf7fda4c912162db13407c7188bc5554cb4e16ff5f83"
+  }
+}

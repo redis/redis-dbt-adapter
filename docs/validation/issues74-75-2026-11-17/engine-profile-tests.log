@@ -1,0 +1,16 @@
+warning: patch `arrow-flight v58.4.0 (https://github.com/sdf-labs/arrow-rs?rev=4419807fa617c6f4d9c7ab5d86c9ae94c4b9b854#4419807f)` was not used in the crate graph
+help: Check that the patched package version and available features are compatible
+      with the dependency requirements. If the patch has a different version from
+      what is locked in the Cargo.lock file, run `cargo update` to use the new
+      version. This may also occur with an optional dependency that is not enabled.
+warning: profile package spec `sdf-frontend` in profile `dev` did not match any packages
+    Finished `test` profile [unoptimized] target(s) in 0.44s
+     Running unittests src/lib.rs (/private/tmp/redis-dbt-issue40-engine/target/debug/deps/dbt_schemas-4613c341cb9b343e)
+
+running 3 tests
+test schemas::profiles::redis_adbc_tests::native_profile_round_trips_and_hides_credentials_from_target ... ok
+test schemas::profiles::redis_adbc_tests::flight_profile_is_typed_and_target_has_no_client_credentials ... ok
+test schemas::profiles::redis_adbc_tests::profile_defaults_and_thread_validation ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 775 filtered out; finished in 0.01s
+

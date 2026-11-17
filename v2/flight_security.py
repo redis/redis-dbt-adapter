@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check Flight authentication and certificate rejection through the native CLI."""
+"""Check Redis/Flight authentication and certificate rejection through the native CLI."""
 import argparse
 import os
 from pathlib import Path
@@ -8,11 +8,19 @@ import signal
 import subprocess
 import tempfile
 import time
+from urllib.parse import urlsplit, urlunsplit
 
 from smoke import SmokeError, configure_transport, require_integration_config
 
 
-def run_security(binary):
+def verify_password_redaction(output, env):
+    for key in ("FLIGHT_SQL_PASSWORD", "REDIS_PASSWORD"):
+        value = env.get(key)
+        if value and value in output:
+            raise SmokeError("Configured credentials appeared in native CLI output")
+
+
+def run_security(binary, transport="flightsql"):
     require_integration_config()
     env = os.environ.copy()
     env.update(REDIS_DBT_V2_SCHEMA="public", DBT_ALLOW_EXPERIMENTAL_ADAPTERS="yes",
@@ -20,7 +28,9 @@ def run_security(binary):
     with tempfile.TemporaryDirectory(prefix="dbt-v2-flight-security-") as directory:
         project = Path(directory)
         shutil.copytree(Path(__file__).with_name("smoke"), project, dirs_exist_ok=True)
-        configure_transport(project, env, "flightsql")
+        configure_transport(project, env, transport)
+        password_key = "FLIGHT_SQL_PASSWORD" if transport == "flightsql" else "REDIS_PASSWORD"
+        ca_key = "FLIGHT_SQL_TLS_CA_FILE" if transport == "flightsql" else "REDIS_TLS_CA_FILE"
         (project / "macros" / "flight_probe.sql").write_text(
             "{% macro flight_probe() %}"
             "{% do run_query('create temp table flight_local (id bigint)') %}"
@@ -30,7 +40,7 @@ def run_security(binary):
             "{% set result = run_query('select id from flight_local') %}"
             "{% if result.rows[0][0] != 1 %}{{ exceptions.raise_compiler_error('Invalid Flight probe') }}"
             "{% endif %}{% endmacro %}\n"
-            "{% macro flight_cancel() %}{{ log('Flight cancellation probe started', info=True) }}"
+            "{% macro flight_cancel() %}{{ log('Native cancellation probe started', info=True) }}"
             "{% do run_query('select sum(length(repeat(cast(g as varchar), 2000))) "
             "from generate_series(1, 500000) as s(g)') %}{% endmacro %}\n")
         env["DBT_LOG_PATH"] = str(project / "logs")
@@ -49,25 +59,26 @@ def run_security(binary):
                 (Path(env["FLIGHT_QUALIFICATION_ARTIFACTS"]) / "security-failure.log").write_text(diagnostic)
             if expected is None:
                 if result.returncode:
-                    raise SmokeError("Authenticated native Flight probe failed")
+                    raise SmokeError("Authenticated native " + transport + " probe failed")
             elif result.returncode == 0 or not any(word in output for word in expected):
-                raise SmokeError("Native Flight did not reject the expected security failure")
+                raise SmokeError("Native " + transport + " did not reject the expected security failure")
             # Inspect diagnostics without echoing potentially sensitive output.
-            for key in ("FLIGHT_SQL_PASSWORD",):
-                value = overrides.get(key, env[key])
-                if value and value in result.stdout + result.stderr:
-                    raise SmokeError("Flight credentials appeared in native CLI output")
+            verify_password_redaction(result.stdout + result.stderr, {**env, **overrides})
 
         invoke({})
-        invoke({"FLIGHT_SQL_PASSWORD": "deliberately-invalid-flight-password"},
-               ("unauthenticated", "unauthorized", "invalid credentials", "authentication"))
+        if transport == "redis":
+            uri = urlsplit(env["REDIS_URI"])
+            incorrect = uri._replace(netloc="wrong:incorrect-uri-password@" + uri.netloc.rsplit("@", 1)[-1])
+            invoke({"REDIS_URI": urlunsplit(incorrect)})
+        invoke({password_key: "deliberately-invalid-test-password"},
+               ("unauthenticated", "unauthorized", "invalid credentials", "authentication", "wrongpass"))
         # A valid unrelated CA exercises chain verification, rather than PEM parsing.
         wrong_ca = project / "untrusted.crt"
         subprocess.run(["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes",
                         "-days", "1", "-subj", "/CN=unrelated-flight-test-ca",
                         "-keyout", str(project / "untrusted.key"), "-out", str(wrong_ca)],
                        check=True, capture_output=True)
-        invoke({"FLIGHT_SQL_TLS_CA_FILE": str(wrong_ca)},
+        invoke({ca_key: str(wrong_ca)},
                ("unknown authority", "certificate verify", "certificate_unknown"))
         cancellation_log = project / "cancellation.log"
         with cancellation_log.open("w") as log:
@@ -77,7 +88,7 @@ def run_security(binary):
                 env=env, stdout=log, stderr=subprocess.STDOUT)
             try:
                 deadline = time.monotonic() + 15
-                while "Flight cancellation probe started" not in cancellation_log.read_text():
+                while "Native cancellation probe started" not in cancellation_log.read_text():
                     if process.poll() is not None or time.monotonic() > deadline:
                         raise SmokeError("Native cancellation probe did not start")
                     time.sleep(.05)
@@ -86,29 +97,37 @@ def run_security(binary):
                     raise SmokeError("Cancellation query finished before interruption")
                 process.send_signal(signal.SIGINT)
                 process.wait(timeout=15)
-                diagnostic = cancellation_log.read_text().lower()
+                cancel_output = cancellation_log.read_text()
+                verify_password_redaction(cancel_output, env)
+                diagnostic = cancel_output.lower()
                 if process.returncode <= 0 or not any(word in diagnostic for word in ("cancelled", "canceled", "interrupted")):
-                    raise SmokeError("Native Flight cancellation was not reported")
+                    raise SmokeError("Native cancellation was not reported")
             finally:
                 if process.poll() is None:
                     process.kill()
                     process.wait()
                 if os.environ.get("FLIGHT_QUALIFICATION_ARTIFACTS"):
-                    shutil.copyfile(cancellation_log, Path(os.environ["FLIGHT_QUALIFICATION_ARTIFACTS"]) / "cancellation.log")
+                    diagnostic = cancellation_log.read_text()
+                    for key in ("FLIGHT_SQL_PASSWORD", "REDIS_PASSWORD"):
+                        if env.get(key):
+                            diagnostic = diagnostic.replace(env[key], "[REDACTED]")
+                    (Path(os.environ["FLIGHT_QUALIFICATION_ARTIFACTS"]) / "cancellation.log").write_text(diagnostic)
         invoke({})
-    print("Native Flight security passed: authenticated TLS, rejected credentials, "
+    print("Native " + transport + " security passed: authenticated TLS, rejected credentials, "
           "untrusted certificate, no-fetch session preservation, bounded cancellation, "
-          "and subsequent recovery.")
+          "and subsequent recovery." +
+          (" Explicit credentials override incorrect URI credentials." if transport == "redis" else ""))
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dbt", required=True)
+    parser.add_argument("--transport", choices=("redis", "flightsql"), default="flightsql")
     args = parser.parse_args()
     try:
-        run_security(args.dbt)
+        run_security(args.dbt, args.transport)
     except (OSError, ValueError, SmokeError, subprocess.SubprocessError) as error:
-        parser.exit(1, f"Native Flight security failed: {error}\n")
+        parser.exit(1, f"Native {args.transport} security failed: {error}\n")
 
 
 if __name__ == "__main__":

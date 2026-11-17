@@ -1,0 +1,6 @@
+{
+  "status": "passed",
+  "fresh_bootstrap": "passed",
+  "verified_reuse": "passed",
+  "tls_auth_search_three_shards_qpf4x": "independently verified on both invocations"
+}

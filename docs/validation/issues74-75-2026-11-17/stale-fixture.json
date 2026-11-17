@@ -1,0 +1,8 @@
+{
+  "status": "passed",
+  "scenario": "owned restarted container with stale verified-api marker",
+  "expected_failure": "saved management CA rejected; actionable reset required",
+  "elapsed_seconds": 2.232159583014436,
+  "message": "The owned Enterprise fixture no longer trusts its saved management CA. Its container and local state may no longer match, or its certificate may have expired. Reset the dedicated fixture using scripts/README.md#resetting-the-fixture, then rerun up. Certificate verification remains enabled.",
+  "tls_verification_disabled_for_recovery": false
+}

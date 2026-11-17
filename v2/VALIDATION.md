@@ -4,7 +4,9 @@ The [Flight SQL qualification](../docs/validation/issues70-71-2026-11-16.md)
 records macOS and Linux passes with latest driver main, deterministic publication
 refusals and same-session cancellation/resource probes, plus a separate stable/main
 Linux comparison. The integration pin now selects the merged Flight-enabled
-engine `3f285a37312c6ccab44a16b71d831c49e35417bd`; Redis and Flight remain
+engine `1988196900588c1be955b7b0cc87cd956fa47539`, which adds only the public
+auth-verification Markdown correction to the qualified Flight implementation;
+Redis and Flight remain
 experimental. Original failing evidence is preserved in the earlier records.
 
 ## Direct-Redis qualification: November 16, 2026
