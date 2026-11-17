@@ -32,7 +32,7 @@ projects, and test resources.
 
 See [integration status and remaining work](docs/integration-status.md) for
 version-specific evidence, the dbt v2 upstream contribution checklist, and the
-remaining Flight SQL qualification work tracked by [issue #40](https://github.com/redis/redis-dbt-adapter/issues/40).
+Flight SQL qualification tracked by [issue #40](https://github.com/redis/redis-dbt-adapter/issues/40).
 The adapter originated as a community project; its move to the Redis GitHub
 organization does not by itself establish Redis, Inc. maintenance or support.
 
@@ -63,10 +63,10 @@ refresh local package links with `uv run dbt deps`.
 ## Use Redis with dbt v2
 
 **The Redis dbt v2 adapter is implemented in the
-[`alberttwong/dbt` engine fork](https://github.com/alberttwong/dbt).** Its engine
-changes are merged, and the supported v1 compatibility scenarios pass on macOS
-and Linux, including the NYC taxi project, Python models, snapshots,
-microbatch, and trusted TLS.
+[`alberttwong/dbt` engine fork](https://github.com/alberttwong/dbt).** The [pinned source](v2/upstream.json) has recorded native validation, including
+the NYC taxi project, Python models, snapshots, microbatch, and trusted TLS.
+The [upstream adapter contribution](https://github.com/dbt-labs/dbt/pull/17195)
+is submitted; it is not included in the standard dbt v2 executable.
 
 - **Get the adapter:** build the Redis-enabled engine from the tested source
   commit listed in [`v2/upstream.json`](v2/upstream.json), following the

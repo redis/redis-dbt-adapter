@@ -1,7 +1,27 @@
-# Native Redis v2 feature validation
+# Native Redis v2 validation
+
+## Current upstream candidate: November 16, 2026
+
+The current [upstream.json](upstream.json) pins engine
+`754f0a47164f86226dc568096ac56906ff9d2e69`, reconciled with upstream
+`de5f46bf8e58a7e6e635b6d15ebcd09482b56e2f` and submitted in
+[dbt-labs/dbt#17195](https://github.com/dbt-labs/dbt/pull/17195).
+The [complete qualification](../docs/validation/issue40-2026-11-16.md) records
+actual macOS arm64 native runs with dbt-oss 2.0.11, driver v0.0.27, Redis
+Enterprise 8.6.2, verified TLS/authentication, three shards and active QPF 4x.
+
+The Rust ADBC 1.1/concurrency audit, two smoke builds, parity fixture, full sampled
+taxi workflow, docs/catalog and cleanup passed. Taxi: 82 successes and one
+configured warning; empty build: 82 successes. The optional Python 3.13.16
+runtime used PyArrow 26.0.0 and ADBC manager 1.12.0 without the Python dbt adapter.
+The qualification lists concrete failures, candidate fixes, tests and limits.
+Upstream CodeScene, CLA and fork-CI gates are tracked separately; no stock dbt
+v2 or v2 Flight SQL support is claimed.
+
+## Historical feature-parity milestone: October 2026
 
 The feature-parity changes are merged in [engine PR #3](https://github.com/alberttwong/dbt/pull/3)
-and pinned by `upstream.json`. The connection-option patch received human
+for the historical milestone below. The connection-option patch received human
 verification before commit. No stock dbt v2 binary includes Redis.
 
 Local environment: macOS arm64, dbt-oss 2.0.8, Redis 8.6.2, Redis ADBC v0.0.16,

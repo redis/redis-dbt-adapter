@@ -1,5 +1,10 @@
 # dbt v1 Flight SQL validation
 
+The [November 16 authenticated TLS qualification](../docs/validation/issue40-2026-11-16.md)
+adds immutable source/driver identities, independently verified backend topology,
+5 security/session probes and 192 functional passes (26 skipped, no warnings).
+The November 2 result below is historical and retains its original limits.
+
 Verified locally on November 2, 2026 for [issue #36](https://github.com/redis/redis-dbt-adapter/issues/36).
 
 ## Result

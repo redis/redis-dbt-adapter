@@ -1,0 +1,88 @@
+{
+  "date": "2026-11-16",
+  "integration_code_commit": "b6ef0935f94206189f55b1bfb25f76a09f8e355f",
+  "engine_commit": "754f0a47164f86226dc568096ac56906ff9d2e69",
+  "upstream_base_commit": "de5f46bf8e58a7e6e635b6d15ebcd09482b56e2f",
+  "dbt_oss": "2.0.11",
+  "dbt_core": "1.12.6",
+  "flight_client": "1.13.0",
+  "engine_binary_sha256": "56472354fce44b7d706104bece52768226a9b511f914a89d1b88776dc77f6ac8",
+  "cargo_lock_sha256": "bbd3415be59605c7b91cab14f0e0b4e9e61e49166e2b299ad116aa28e333ccda",
+  "platform": {
+    "os": "Darwin",
+    "release": "25.6.0",
+    "architecture": "arm64"
+  },
+  "backend": {
+    "redis_version": "8.6.2",
+    "deployment": "Redis Enterprise",
+    "shards": 3,
+    "qpf": 4,
+    "verified_tls": true,
+    "named_user_authentication": true
+  },
+  "flight_build": {
+    "flight_source_commit": "4d91e37135080be7f0eeb770fc89fa7adeb14bc8",
+    "redis_adbc_release": "v0.0.27",
+    "redis_adbc_commit": "225e00569986e8340acd5978345f3275a889ade6",
+    "redis_adbc_go_module": "v0.0.0-20261115214919-225e00569986",
+    "go_version": "go version go1.27.3 darwin/arm64",
+    "binary_sha256": "1190e287e87df2186d8cdb0d1b0f62b3a7655f27705ff35c05072d39c6559617"
+  },
+  "results": {
+    "flight_functional": {
+      "tests": 218,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 26
+    },
+    "flight_security": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "flight_python": {
+      "python": "3.13.16",
+      "pyarrow": "26.0.0",
+      "adbc-driver-manager": "1.13.0"
+    },
+    "native_optional_python": {
+      "python": "3.13.16",
+      "pyarrow": "26.0.0",
+      "adbc-driver-manager": "1.12.0"
+    }
+  },
+  "native": {
+    "smoke": "passed, two builds and cleanup",
+    "parity": "passed, including Python, contracts, snapshots, merge, microbatch, CSV, docs/catalog and empty builds",
+    "taxi": "passed, including Python, packages, demos, docs/catalog and empty build",
+    "taxi_build_successes": 82,
+    "taxi_build_configured_warnings": 1,
+    "taxi_empty_build_successes": 82,
+    "sampled_taxi_rows": 153356,
+    "rust_adbc_audit_passed": 1,
+    "rust_auth_unit_passed": 7,
+    "rust_auth_opt_in_ignored": 1,
+    "rust_profile_unit_passed": 2,
+    "rust_macro_passed": 7,
+    "rust_metadata_passed": 1,
+    "rust_retry_passed": 2,
+    "rust_decimal_passed": 1,
+    "rust_sql_passed": 80,
+    "rust_sql_ignored": 2,
+    "rust_unit_fixture_passed": 2,
+    "native_python_runtime_unit_passed": 6,
+    "adapter_unit_passed": 36,
+    "harness_unit_passed": 24
+  },
+  "scope_limits": [
+    "macOS arm64 local qualification; Linux Flight workflow added, result pending",
+    "upstream PR 17195 submitted, not merged; standard dbt v2 still excludes Redis",
+    "v2 Flight SQL rejected during profile/auth configuration; tracked in issue 51",
+    "no SQL transactions, materialized views, HA or multi-replica Flight qualification claimed",
+    "upstream CodeScene gate remains open in issue 63",
+    "upstream CLA and fork-CI approval remain open in issue 64"
+  ],
+  "rustc": "1.96.1 (31fca3adb 2026-06-26)"
+}
