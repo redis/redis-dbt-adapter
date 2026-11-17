@@ -1,0 +1,105 @@
+warning: patch `arrow-flight v58.4.0 (https://github.com/sdf-labs/arrow-rs?rev=4419807fa617c6f4d9c7ab5d86c9ae94c4b9b854#4419807f)` was not used in the crate graph
+help: Check that the patched package version and available features are compatible
+      with the dependency requirements. If the patch has a different version from
+      what is locked in the Cargo.lock file, run `cargo update` to use the new
+      version. This may also occur with an optional dependency that is not enabled.
+warning: profile package spec `sdf-frontend` in profile `dev` did not match any packages
+   Compiling dbt-base v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-base)
+   Compiling minijinja-typecheck-builtins v0.0.0 (/private/tmp/redis-dbt-upstream-main-sync/crates/minijinja-typecheck-builtins)
+   Compiling dbt-runtime-macros v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-runtime-macros)
+   Compiling minijinja v2.5.0 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-jinja/minijinja)
+   Compiling dbt-runtime v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-runtime)
+   Compiling dbt-tracing v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-tracing)
+   Compiling dbt-sql-base v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-sql-base)
+   Compiling dbt-proc-macros v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-proc-macros)
+   Compiling dbt-adapter-core v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-adapter-core)
+   Compiling proto-rust-macros v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/proto-rust-macros)
+   Compiling dbt-cancel v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-cancel)
+   Compiling dbt-telemetry v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-telemetry)
+   Compiling dbt-frontend-common v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-frontend-common)
+   Compiling dbt-error v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-error)
+   Compiling proto-rust v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/proto-rust)
+   Compiling dbt-tui-progress v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-tui-progress)
+   Compiling dbt-flags v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-flags)
+   Compiling minijinja-contrib v2.5.0 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-jinja/minijinja-contrib)
+   Compiling dbt-sql-keywords v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-sql-keywords)
+   Compiling dbt-adbc v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-adbc)
+   Compiling dbt-common v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-common)
+   Compiling dbt-adapter-sql v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-adapter-sql)
+   Compiling dbt-jinja-vars v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-jinja-vars)
+   Compiling dbt-path v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-path)
+   Compiling dbt-auth v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-auth)
+   Compiling dbt-schema-store v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-schema-store)
+   Compiling dbt-schemas v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-schemas)
+   Compiling dbt-adapter-engine v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-adapter-engine)
+    Finished `test` profile [unoptimized] target(s) in 41.30s
+     Running unittests src/lib.rs (/private/tmp/redis-dbt-issue40-engine/target/debug/deps/dbt_adapter_engine-017ba28cfea34ce4)
+
+running 64 tests
+test retry::redis::tests::unknown_outcomes_and_other_statuses_are_not_replayed ... ok
+test retry::databricks::tests::databricks_skips_non_retryable_errors ... ok
+test retry::snowflake::tests::snowflake_matches_gosnowflake_client_timeout ... ok
+test retry::redshift::tests::redshift_matches_transient_lease_contention ... ok
+test retry::redshift::tests::redshift_skips_permanent_oauth_config_errors ... ok
+test retry::redis::tests::flight_retries_only_the_exact_redis_refusal_envelope ... ok
+test retry::redshift::tests::redshift_matches_aws_control_plane_transients ... ok
+test retry::snowflake::tests::snowflake_error_number_prefers_vendor_code ... ok
+test retry::redshift::tests::redshift_matches_pgx_dial_via_shared_go_net_set ... ok
+test retry::databricks::tests::databricks_matches_retryable_error_marker ... ok
+test retry::redshift::tests::redshift_skips_sqlstate_08p01_protocol_violation ... ok
+test retry::snowflake::tests::snowflake_matches_http_5xx_substring ... ok
+test retry::redshift::tests::redshift_matches_sqlstate_class_08_connection_exception ... ok
+test retry::redshift::tests::redshift_skips_config_errors ... ok
+test retry::snowflake::tests::snowflake_matches_io_status ... ok
+test retry::snowflake::tests::snowflake_skips_login_404 ... ok
+test retry::snowflake::tests::snowflake_still_retries_uncoded_failures ... ok
+test retry::snowflake::tests::snowflake_skips_get_sso_4xx ... ok
+test retry::snowflake::tests::snowflake_retries_auth_5xx_and_throttling ... ok
+test retry::snowflake::tests::snowflake_skips_saml_404 ... ok
+test retry::snowflake::tests::snowflake_skips_truly_unrelated_failure ... ok
+test retry::snowflake::tests::snowflake_login_rejection_follows_retry_on_database_errors ... ok
+test retry::redshift::tests::redshift_skips_class_28_auth_failure_by_default ... ok
+test retry::snowflake::tests::snowflake_respects_retry_on_database_errors_flag ... ok
+test retry::snowflake::tests::snowflake_skips_external_browser_backoff ... ok
+test retry::databricks::tests::databricks_respects_retry_all_flag ... ok
+test retry::snowflake::tests::snowflake_skips_real_auth_failures_by_default ... ok
+test retry::tests::bridge_errors_are_never_retried ... ok
+test retry::tests::bridge_errors_without_sqlstate_are_never_retried ... ok
+test retry::tests::connect_retry_policy_default_retries_for_non_snowflake ... ok
+test retry::tests::connect_retry_policy_snowflake_defaults ... ok
+test retry::tests::connect_retry_policy_snowflake_reads_profile_fields ... ok
+test retry::tests::execute_stops_immediately_on_non_retryable_error ... ok
+test retry::tests::connect_timeout_parses_bare_integer_seconds ... ok
+test retry::tests::exponential_backoff_matches_python_recurrence ... ok
+test retry::tests::quadratic_backoff_matches_python_formula ... ok
+test retry::tests::query_retry_policy_bigquery_reads_job_settings ... ok
+test retry::tests::execute_runs_initial_plus_max_retries_attempts_on_persistent_failure ... ok
+test retry::tests::query_retry_policy_default_retries_is_one ... ok
+test retry::tests::query_retry_policy_does_not_retry_unrelated_errors ... ok
+test retry::tests::query_retry_policy_is_a_no_op_for_other_adapters ... ok
+test retry::tests::query_retry_policy_bigquery_only_retries_confirmed_transient_job_failures ... ok
+test retry::tests::query_retry_policy_never_retries_cancellation ... ok
+test retry::tests::query_retry_policy_reads_retries_field ... ok
+test retry::tests::query_retry_policy_redis_remains_bounded_and_refusal_only ... ok
+test retry::tests::query_retry_policy_skips_bridge_errors_even_with_retry_all ... ok
+test retry::tests::redshift_uses_retries_and_ignores_connect_retries ... ok
+test retry::tests::query_retry_policy_skips_bridge_stream_errors_with_retry_all ... ok
+test retry::tests::retries_alias_maps_to_max_retries ... ok
+test retry::tests::retry_sleep_defaults_to_none ... ok
+test retry::tests::shared_go_net_patterns_apply_to_snowflake_and_redshift ... ok
+test retry::tests::retry_loop_calls_on_retry_only_before_another_attempt ... ok
+test retry::tests::snowflake_uses_connect_retries_and_ignores_retries ... ok
+test retry::tests::connect_timeout_invalid_falls_back_to_none ... ok
+test retry::tests::connect_timeout_parses_minutes_string ... ok
+test retry::tests::connect_timeout_parses_seconds_string ... ok
+test retry::redis::tests::retries_only_an_explicit_refused_publication ... ok
+test retry::tests::execute_uses_fixed_retry_sleep_when_connect_timeout_set ... ok
+test retry::tests::query_retry_policy_retries_on_missing_schema_race ... ok
+test retry::tests::query_retry_policy_respects_retry_all_flag ... ok
+test retry::tests::query_retry_policy_retries_on_concurrent_transaction_conflict ... ok
+test retry::tests::query_retry_policy_bigquery_resubmits_failed_job ... ok
+test retry::tests::query_retry_policy_retries_on_oid_race_then_succeeds ... ok
+test retry::tests::query_retry_policy_exhausts_retries_and_returns_last_error ... ok
+
+test result: ok. 64 passed; 0 failed; 0 ignored; 0 measured; 71 filtered out; finished in 3.01s
+

@@ -1,0 +1,88 @@
+warning: patch `arrow-flight v58.4.0 (https://github.com/sdf-labs/arrow-rs?rev=4419807fa617c6f4d9c7ab5d86c9ae94c4b9b854#4419807f)` was not used in the crate graph
+help: Check that the patched package version and available features are compatible
+      with the dependency requirements. If the patch has a different version from
+      what is locked in the Cargo.lock file, run `cargo update` to use the new
+      version. This may also occur with an optional dependency that is not enabled.
+warning: profile package spec `sdf-frontend` in profile `dev` did not match any packages
+   Compiling minijinja v2.5.0 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-jinja/minijinja)
+   Compiling dbt-tracing v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-tracing)
+   Compiling dbt-frontend-common v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-frontend-common)
+   Compiling minijinja-contrib v2.5.0 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-jinja/minijinja-contrib)
+   Compiling dbt-error v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-error)
+   Compiling dbt-telemetry v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-telemetry)
+   Compiling dbt-adbc v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-adbc)
+   Compiling dbt-jinja-vars v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-jinja-vars)
+   Compiling dbt-common v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-common)
+   Compiling dbt-auth v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-auth)
+   Compiling dbt-schema-store v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-schema-store)
+   Compiling dbt-schemas v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-schemas)
+   Compiling dbt-lexer-trino v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-sql/dbt-lexer-trino)
+   Compiling dbt-lexer-bigquery v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-sql/dbt-lexer-bigquery)
+   Compiling dbt-lexer-snowflake v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-sql/dbt-lexer-snowflake)
+   Compiling dbt-lexer-databricks v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-sql/dbt-lexer-databricks)
+   Compiling dbt-lexer-redshift v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-sql/dbt-lexer-redshift)
+   Compiling adbc-record-replay v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/adbc-record-replay)
+   Compiling dbt-sql-utils v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-sql/dbt-sql-utils)
+   Compiling dbt-tracked-stmt v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-tracked-stmt)
+   Compiling dbt-agate v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-agate)
+   Compiling dbt-platform-auth v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-platform-auth)
+   Compiling dbt-env v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-env)
+   Compiling dbt-adapter-engine v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-adapter-engine)
+   Compiling dbt-adapter v2.0.11 (/private/tmp/redis-dbt-upstream-main-sync/crates/dbt-adapter)
+warning: unnecessary qualification
+    --> crates/dbt-adapter/src/adapter/adapter_impl.rs:2269:17
+     |
+2269 |                 crate::metadata::redis::supplement_schema(
+     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: requested on the command line with `-W unused-qualifications`
+help: remove the unnecessary path segments
+     |
+2269 -                 crate::metadata::redis::supplement_schema(
+2269 +                 metadata::redis::supplement_schema(
+     |
+
+warning: unnecessary qualification
+    --> crates/dbt-adapter/src/sql_types.rs:1415:33
+     |
+1415 |             DefaultTypeOps::new(AdapterType::RedisAdbc)
+     |                                 ^^^^^^^^^^^^^^^^^^^^^^
+     |
+help: remove the unnecessary path segments
+     |
+1415 -             DefaultTypeOps::new(AdapterType::RedisAdbc)
+1415 +             DefaultTypeOps::new(RedisAdbc)
+     |
+
+warning: unnecessary qualification
+    --> crates/dbt-adapter/src/sql_types.rs:1421:33
+     |
+1421 |             DefaultTypeOps::new(AdapterType::Postgres)
+     |                                 ^^^^^^^^^^^^^^^^^^^^^
+     |
+help: remove the unnecessary path segments
+     |
+1421 -             DefaultTypeOps::new(AdapterType::Postgres)
+1421 +             DefaultTypeOps::new(Postgres)
+     |
+
+warning: `dbt-adapter` (lib test) generated 3 warnings (run `cargo fix --lib -p dbt-adapter --tests` to apply 3 suggestions)
+    Finished `test` profile [unoptimized] target(s) in 41.69s
+     Running unittests src/lib.rs (/private/tmp/redis-dbt-issue40-engine/target/debug/deps/dbt_adapter-0afee270fa840ba2)
+
+running 12 tests
+test connection::tests::tls_container_stores_tlocal_connections ... ok
+test connection::tests::mismatched_fingerprint_forces_new_connection ... ok
+test connection::tests::drop_thread_local_connection_empties_the_slot ... ok
+test connection::tests::undiscarded_guard_returns_the_connection_to_the_slot ... ok
+test connection::tests::discarded_guard_closes_the_connection_instead_of_returning_it_to_the_slot ... ok
+test connection::tests::tlocal_connection_lifecycle ... ok
+test connection::tests::duckdb_guard_is_discarded_on_drop ... ok
+test connection::tests::worker_exit_closes_the_parked_connection ... ok
+test connection::tests::a_panicking_connection_close_does_not_break_shutdown ... ok
+test connection::tests::factory_recycle_parks_the_connection_unless_discarded ... ok
+test connection::tests::borrow_tlocal_connection_no_override_uses_cached_fingerprint ... ok
+test connection::tests::borrow_tlocal_connection_databricks_override_uses_fingerprint_for_config ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 1693 filtered out; finished in 0.01s
+

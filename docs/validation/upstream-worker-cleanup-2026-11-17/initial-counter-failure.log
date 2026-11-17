@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/private/tmp/redis-dbt-upstream-main-live.py", line 39, in <module>
+    qualify_refusals(binary,engine,env,proxy.gate,out);checks['refusal']='passed'
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/albert.wong/.codex/worktrees/d711/redis-dbt-adapter/v2/flight_refusal.py", line 84, in qualify_refusals
+    raise SmokeError('Native retry must commit exactly one fresh workspace')
+smoke.SmokeError: Native retry must commit exactly one fresh workspace
