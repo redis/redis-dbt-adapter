@@ -1,0 +1,18 @@
+{
+  "status": "passed",
+  "engine_commit": "39a2172e1b358e0082726c018bdd00eb5d18bb30",
+  "probe_source_sha256": "cb374290975983316c8cfd1813af1c461caf5c3580aab480adfe9736dda2876d",
+  "v2_tests": 43,
+  "retry_tests": 64,
+  "connection_tests": 12,
+  "execution_actor": "automation",
+  "files": {
+    "connection-tests.log": "38ea111534f801f0a230ed6ec9effd14d5fc3efe392f7f310b9bdfcb983cb19a",
+    "engine-validation.json": "728e695eba2ccb8f6722f4f2cb8e0f72d1a334177d81eba82f0c440d6517893a",
+    "initial-counter-failure.log": "720071111b237782fda63224b4eb8849df6681c8b1c9bcf2dfd25e5b638cf71f",
+    "probe-tests.log": "f7ecdfa53496c189414b03e253ea74544d952cdbf29eae09ab095197667be54a",
+    "refusal.json": "2d9f4d4bd1c85b732f33078038b387a56a8c177322b295714ecd715434b4e441",
+    "retry-tests.log": "1052e96ec61e4611b48644b2c0dd2e85c2d81e92de72ea2db472fd122eca255e",
+    "session-cancellation.json": "d9070d719cb201dfc44e80f0583a8af9acc82847c4af111a8807fd81fb471280"
+  }
+}

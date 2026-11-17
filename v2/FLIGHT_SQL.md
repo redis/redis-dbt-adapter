@@ -165,6 +165,12 @@ is imported separately to test empty and nonempty retained tables, the 20-attemp
 bound, and a caller-provided one-shot reader that must receive just one attempt.
 The owned schema must be dropped after both successful and failed checks.
 
+Successful publication counters include worker/session teardown, which may
+remove temporary relations. SQL row/state assertions establish that the write
+committed once. Persistent native refusal targets exactly 20 workspaces; an
+extra SQL attempt would then succeed and fail the expected-error or persisted
+state check. Teardown remains free to clean up after the bound is exhausted.
+
 `session-cancellation.json` supplements native CLI SIGINT with a Python ADBC
 Flight protocol probe. It observes an active query lease in Redis, cancels a
 partially consumed result stream, checks time zone and temporary data on the

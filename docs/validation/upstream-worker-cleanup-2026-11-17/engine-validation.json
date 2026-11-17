@@ -1,0 +1,18 @@
+{
+  "status": "passed",
+  "engine_commit": "39a2172e1b358e0082726c018bdd00eb5d18bb30",
+  "upstream_commit": "567e03df1edbe7f8e72ccdd333a568b131e41977",
+  "dbt_sha256": "25401e38ff8b0512ad7bd8abe9cf23797310e15f5ef6ee7e4bdcf360b36e2515",
+  "checks": {
+    "native-smoke": "passed (retained from earlier invocation at the same engine commit)",
+    "native-parity": "passed (retained from earlier invocation at the same engine commit)",
+    "native-auth": "passed (retained from earlier invocation at the same engine commit)",
+    "flight-auth": "passed (retained from earlier invocation at the same engine commit)",
+    "flight-smoke": "passed (retained from earlier invocation at the same engine commit)",
+    "flight-parity": "passed (retained from earlier invocation at the same engine commit)",
+    "refusal": "passed",
+    "session-cancellation": "passed"
+  },
+  "driver_source_commit": "3671fca7894240551d19aeb196d7b7362f8869d2",
+  "execution_actor": "automation"
+}

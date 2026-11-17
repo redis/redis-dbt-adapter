@@ -51,6 +51,17 @@ class PublicationGateTests(unittest.TestCase):
         self.assertEqual(len(gate.receipt()['workspaces']), 20)
         self.assertEqual(sum(p['calls'] for p in gate.receipt()['workspaces']), 60)
 
+    def test_finite_bound_keeps_refusing_rebases_and_allows_later_cleanup(self):
+        gate = PublicationGate()
+        gate.arm(limit=20)
+        for number in range(20):
+            self.assertTrue(gate.select(publication(str(number).encode())))
+        # Rebase calls still belong to the refused twentieth SQL attempt.
+        self.assertTrue(gate.select(publication(b'19')))
+        self.assertFalse(gate.select(publication(b'worker-temp-cleanup')))
+        self.assertEqual(len(gate.receipt()['workspaces']), 20)
+        self.assertEqual(gate.receipt()['passed_publications'], 1)
+
 
 class RESPTests(unittest.TestCase):
     def test_commands_roundtrip_binary_and_credentials_without_decoding(self):

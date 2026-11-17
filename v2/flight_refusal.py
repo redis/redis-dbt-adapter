@@ -43,6 +43,11 @@ def qualify_refusals(binary, engine, env, gate, output):
 {% macro refusal_script() %}
 {% do run_query('insert into "' ~ target.schema ~ '".probe values (2); insert into "' ~ target.schema ~ '".probe values (3)') %}
 {% endmacro %}
+{% macro refusal_assert_single() %}
+{% set result = run_query('select id from "' ~ target.schema ~ '".probe') %}
+{% if result.rows | length != 1 or result.rows[0][0] != 1 %}
+{{ exceptions.raise_compiler_error('Refused bounded write unexpectedly committed') }}{% endif %}
+{% endmacro %}
 {% macro refusal_assert_prefix() %}
 {% set result = run_query('select id from "' ~ target.schema ~ '".probe order by id') %}
 {% if result.rows | length != 2 or result.rows[0][0] != 1 or result.rows[1][0] != 2 %}
@@ -80,14 +85,21 @@ def qualify_refusals(binary, engine, env, gate, output):
             gate.arm(limit=1, skip=1)
             invoke('refusal-native-retry', 'refusal_insert')
             record('native_retry', 1)
-            if gate.receipt()['passed_publications'] != 1:
-                raise SmokeError('Native retry must commit exactly one fresh workspace')
-            gate.arm(limit=None, skip=1)
+            # Worker shutdown can also publish temporary-relation cleanup.
+            # The macro's row/state assertions distinguish a write replay.
+            if gate.receipt()['passed_publications'] < 1:
+                raise SmokeError('Native retry must publish a fresh workspace')
+            # Stop refusing after the expected bound, so an extra SQL attempt
+            # would succeed and fail the CLI/error or persisted-state assertions.
+            # This also lets connection teardown clean up its temporary objects.
+            gate.arm(limit=20, skip=1)
             invoke('refusal-native-bound', 'refusal_insert', success=False)
             record('native_20_attempt_bound', 20)
+            gate.arm(limit=0)
+            invoke('refusal-native-bound-state', 'refusal_assert_single')
             # The engine splits SQL and retries only the refused statement. The
             # first statement commits once; the second exhausts its own bound.
-            gate.arm(limit=None, skip=1)
+            gate.arm(limit=20, skip=1)
             invoke('refusal-native-script', 'refusal_script', success=False)
             record('native_statement_boundary', 20)
             gate.arm(limit=0)
