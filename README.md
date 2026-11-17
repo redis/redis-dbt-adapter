@@ -6,10 +6,10 @@
 
 ## Install the dbt Core adapter
 
-Install the published adapter in a Python 3.13 environment:
+Install the published adapter in a Python 3.14 environment:
 
 ```sh
-python3.13 -m venv .venv
+python3.14 -m venv .venv
 source .venv/bin/activate
 python -m pip install dbt-redis-adbc==0.3.2
 dbt --version

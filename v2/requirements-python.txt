@@ -1,3 +1,4 @@
+# Requires Python 3.14 or later.
 # Optional local runtime for native Python models and the CSV loader.
 # No Python dbt adapter is installed.
 pyarrow==26.0.0

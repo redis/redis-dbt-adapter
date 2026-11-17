@@ -2,11 +2,11 @@
 
 The October 22, 2026 refresh for [issue #29](https://github.com/redis/redis-dbt-adapter/issues/29)
 uses PyArrow 26.0.0 in both Python runtimes and Polars 2.0.0 in the adapter test
-suite. Python 3.13 is now the minimum supported version. The example uses
-Python 3.13 (`>=3.13,<3.14`); the adapter package requires Python 3.13 or later.
-Support for Python 3.11 and 3.12 has been dropped to standardize the runtime and
+suite. Python 3.14 is the minimum supported version. The example uses
+Python 3.14 (`>=3.14,<3.15`); the adapter package requires Python 3.14 or later.
+Support for Python 3.13 and earlier has been dropped to standardize the runtime and
 remove older-Python dependency resolutions. Recreate environments with Python
-3.13 before running `uv sync --locked`.
+3.14 before running `uv sync --locked`.
 
 ## Security updates
 

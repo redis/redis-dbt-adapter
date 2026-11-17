@@ -15,7 +15,7 @@ page, add its repository-relative path to `nav` in `mkdocs.yml`.
 From the repository root:
 
 ```sh
-python3.13 -m venv .venv-docs
+python3.14 -m venv .venv-docs
 source .venv-docs/bin/activate
 python -m pip install -r requirements-docs.txt
 python -m mkdocs serve

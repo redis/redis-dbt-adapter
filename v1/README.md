@@ -47,7 +47,7 @@ dbt  ──►  dbt-redis-adbc (adapter/)  ──►  adbc_driver_manager  ─�
 
 You need a dedicated Redis Enterprise cluster with TLS and username/password
 authentication, [uv](https://docs.astral.sh/uv/) (it provides Python
-3.13 for dbt), and network access to hub.getdbt.com for `dbt deps`.
+3.14 for dbt), and network access to hub.getdbt.com for `dbt deps`.
 Building the driver from source also needs Go 1.26.6 or newer and a C
 toolchain; on macOS arm64 and Linux (x86-64, arm64) the prebuilt one is used.
 The driver's repo, [redis/redis-adbc-driver](https://github.com/redis/redis-adbc-driver),
@@ -217,13 +217,13 @@ against isolated databases, including each taxi dependency matrix entry. CI runs
 - `dbt build --empty --exclude-resource-type snapshot`
 
 [`scripts/ci_check.py`](scripts/ci_check.py) does the checks. It runs on
-Python 3.13 with the locked versions and with the oldest ones
+Python 3.14 with the locked versions and with the oldest ones
 the `pyproject.toml` files allow: dbt-core 1.10.8 (the first 1.10 release
 that accepts the `arguments:` the tests are written with), dbt-adapters 1.16,
 adbc-driver-manager 1.6 and pyarrow 26. Each run takes 3–5 minutes.
 
 CI also runs [dbt's adapter test suite](#dbts-adapter-test-suite) on Python
-3.13, with the locked versions only: dbt-tests-adapter needs newer
+3.14, with the locked versions only: dbt-tests-adapter needs newer
 dbt packages than the oldest ones.
 
 Every CI run, including pull requests, nightly builds and release validation,
@@ -232,7 +232,7 @@ repeat validation against the current release.
 
 CI also audits the locked Python runtime and test dependencies and the optional
 v2 Python runtime with `pip-audit`. The current runtime uses PyArrow 26 and the
-test suite uses Polars 2. Python 3.13 is the minimum supported version. The project
+test suite uses Polars 2. Python 3.14 is the minimum supported version. The project
 constrains certifi to 2026.10.19 or newer to address GHSA-6q48-6c7w-9gw2. See
 [dependency upgrade notes](DEPENDENCIES.md) for upstream constraints that prevent
 some transitive dependencies from reaching their latest release.

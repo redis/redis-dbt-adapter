@@ -70,11 +70,11 @@ jobs:
 
       - uses: astral-sh/setup-uv@v10.2.0
         with:
-          python-version: "3.13"
+          python-version: "3.14"
 
       - name: Install optional native Python runtime (without the v1 adapter)
         run: |
-          uv venv .venv-v2 --python 3.13
+          uv venv .venv-v2 --python 3.14
           uv pip install --python .venv-v2/bin/python -r v2/requirements-python.txt
           echo "$GITHUB_WORKSPACE/.venv-v2/bin" >> "$GITHUB_PATH"
 
