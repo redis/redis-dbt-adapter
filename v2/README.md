@@ -42,13 +42,15 @@ The current pin adds Flight SQL through merged
 [engine PR #4](https://github.com/alberttwong/dbt/pull/4).
 It includes the public auth-verification documentation correction from
 [engine PR #5](https://github.com/alberttwong/dbt/pull/5); that follow-up changes
-Markdown only.
+Markdown only. The current pin also includes the upstream review refactors,
+the merge of upstream `9945d69ae`, and the decimal schema-inference fix for
+[#83](https://github.com/redis/redis-dbt-adapter/issues/83).
 
 ```sh
 git clone https://github.com/alberttwong/dbt.git redis-dbt-engine
 cd redis-dbt-engine
 git remote add upstream https://github.com/dbt-labs/dbt.git
-git checkout 1988196900588c1be955b7b0cc87cd956fa47539
+git checkout e9af305e318c086039ca39763b220f521e717490
 # Requires the checkout's Rust toolchain, a C/C++ toolchain, and protoc.
 cargo build -p dbt-sa-cli
 # Executable: target/debug/dbt

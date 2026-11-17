@@ -1,13 +1,20 @@
 # Native Redis v2 validation
 
+The [November 17 decimal-fix qualification](../docs/validation/issue83-2026-11-17.md)
+passes workspace tests, native smoke/parity, the full sampled taxi workflow and
+Flight qualification with the unreleased driver. The current engine pin fixes
+[#83](https://github.com/redis/redis-dbt-adapter/issues/83), preserving fractional
+expected values in native unit tests.
+
 The [Flight SQL qualification](../docs/validation/issues70-71-2026-11-16.md)
 records macOS and Linux passes with latest driver main, deterministic publication
 refusals and same-session cancellation/resource probes, plus a separate stable/main
-Linux comparison. The integration pin now selects the merged Flight-enabled
-engine `1988196900588c1be955b7b0cc87cd956fa47539`, which adds only the public
-auth-verification Markdown correction to the qualified Flight implementation;
-Redis and Flight remain
-experimental. Original failing evidence is preserved in the earlier records.
+Linux comparison. That historical qualification used the Flight-enabled engine
+`1988196900588c1be955b7b0cc87cd956fa47539`. The current pin in
+[`upstream.json`](upstream.json) also includes upstream review changes and the
+fractional decimal schema-inference fix for
+[#83](https://github.com/redis/redis-dbt-adapter/issues/83). Redis and Flight
+remain experimental. Original failing evidence is preserved in the earlier records.
 
 ## Direct-Redis qualification: November 16, 2026
 
