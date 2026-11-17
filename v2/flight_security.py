@@ -41,6 +41,12 @@ def run_security(binary):
                  "--profiles-dir", str(project), "--target-path", str(project / "target")],
                 env={**env, **overrides}, capture_output=True, text=True, timeout=60)
             output = (result.stdout + result.stderr).lower()
+            if expected is None and result.returncode and env.get("FLIGHT_QUALIFICATION_ARTIFACTS"):
+                diagnostic = result.stdout + result.stderr
+                for key in ("FLIGHT_SQL_PASSWORD", "REDIS_PASSWORD"):
+                    if env.get(key):
+                        diagnostic = diagnostic.replace(env[key], "[REDACTED]")
+                (Path(env["FLIGHT_QUALIFICATION_ARTIFACTS"]) / "security-failure.log").write_text(diagnostic)
             if expected is None:
                 if result.returncode:
                     raise SmokeError("Authenticated native Flight probe failed")

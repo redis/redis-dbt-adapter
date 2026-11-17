@@ -134,6 +134,36 @@ The [manual Linux workflow](../.github/workflows/v2-flight.yml) runs stable and
 main separately and uploads receipts; it has not yet been executed for this
 candidate.
 
+The workflow now defaults to latest driver `main`; select `compare_stable` for
+an additional independently rebuilt stable comparison. Every invocation resolves
+and records the actual driver commit, even when using a moving source ref.
+
+### Deterministic refusal and cancellation probes
+
+The qualifier places a loopback TLS proxy between its owned Flight server and
+the dedicated Redis backend. For selected publication workspaces, it executes
+the driver's real seal operation and returns CAS refusal only after a successful
+seal. The real driver exhausts its metadata rebase attempts and returns the
+Flight refusal envelope; SQL and Flight responses are never mocked. All other
+Redis traffic, including authentication, is forwarded. Do not use this fault
+fixture with a shared database.
+
+`refusal.json` records publication/rebase counts and attempt timing without
+workspace identifiers or credentials. The checks require a successful native
+retry with preserved session settings/temporary data, exactly 20 attempts on
+persistent refusal, and no replay of a script's committed first statement when
+its second statement exhausts retries. The actual optional engine Arrow runtime
+is imported separately to test empty and nonempty retained tables, the 20-attempt
+bound, and a caller-provided one-shot reader that must receive just one attempt.
+The owned schema must be dropped after both successful and failed checks.
+
+`session-cancellation.json` supplements native CLI SIGINT with a Python ADBC
+Flight protocol probe. It observes an active query lease in Redis, cancels a
+partially consumed result stream, checks time zone and temporary data on the
+same connection, and requires all newly created query leases to become inactive
+within ten seconds. It does not establish native engine pool reuse after global
+CLI interruption, nor measure all server memory, Search cursors, or file handles.
+
 ## Boundaries and remaining work
 
 - The candidate remains autocommit-only; it adds no transactions, rollback,
