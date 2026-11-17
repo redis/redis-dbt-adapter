@@ -1,5 +1,11 @@
 # Native Redis v2 validation
 
+The [November 17 decimal-fix qualification](../docs/validation/issue83-2026-11-17.md)
+passes workspace tests, native smoke/parity, the full sampled taxi workflow and
+Flight qualification with the unreleased driver. The current engine pin fixes
+[#83](https://github.com/redis/redis-dbt-adapter/issues/83), preserving fractional
+expected values in native unit tests.
+
 The [Flight SQL qualification](../docs/validation/issues70-71-2026-11-16.md)
 records macOS and Linux passes with latest driver main, deterministic publication
 refusals and same-session cancellation/resource probes, plus a separate stable/main
