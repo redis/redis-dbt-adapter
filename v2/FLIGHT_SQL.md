@@ -4,10 +4,12 @@ This is an experimental implementation for [#51](https://github.com/redis/redis-
 supplied as a reviewable [engine patch](engine/flight-sql.patch) against the
 native engine commit in [upstream.json](upstream.json). The default engine pin
 still supports direct Redis only. **Native v2 Flight support is not advertised:**
-stable-release qualification found a session reset tracked in
-[Flight #74](https://github.com/redis/redis-apache-arrow-flight/issues/74).
-The [qualification receipt](../docs/validation/issue51-2026-11-16.md) distinguishes
-current driver source from stable-release results.
+engine human review and the remaining qualification scope are still pending.
+After [Flight PR #75](https://github.com/redis/redis-apache-arrow-flight/pull/75)
+resolved the session reset in #74, full local qualification passes with both
+latest driver main and latest stable v0.0.27. The
+[qualification receipt](../docs/validation/issue51-2026-11-16.md) preserves the
+original failure and the subsequent passing runs separately.
 
 ## Build and install
 
@@ -91,9 +93,9 @@ Redis information-schema declarations supplement physical Arrow table schemas
 for exact VARCHAR lengths and temporal/decimal types; docs/catalog already use
 Redis metadata. [Driver #453](https://github.com/redis/redis-adbc-driver/issues/453)
 was resolved by [driver PR #454](https://github.com/redis/redis-adbc-driver/pull/454),
-merged at `3671fca7894240551d19aeb196d7b7362f8869d2` after the recorded
-qualification. The compatibility lookup remains for older drivers; the receipts
-retain the actual pre-fix driver revision and do not qualify that new commit.
+merged at `3671fca7894240551d19aeb196d7b7362f8869d2`. The post-Flight-#74
+qualification covers that driver commit; the original receipts retain their
+pre-fix driver revision. The compatibility lookup remains for older drivers.
 
 ## Reproduce qualification
 
@@ -138,9 +140,10 @@ candidate.
   can provide a fresh input reader after an explicit publication refusal.
   Caller-provided one-shot readers, unknown outcomes and cancellation are
   never replayed. Retry attempts are bounded at 20.
-- A full current-source local run passed. Stable v0.0.27 passed security,
-  smoke and parity after the empty-upload fix, but failed strict session
-  isolation. Passing main does not prove all conflict schedules preserve state.
+- Full current-source and stable v0.0.27 local runs passed with Flight server
+  `e4dcbd37322536f73ef923e0ab4b76a1abf3d4dc`, including the strict session
+  audit that failed on the older server. This is bounded local evidence,
+  not proof of every conflict schedule or deployment.
 - Linux execution, deterministic native Flight refusal injection, deeper
   same-session cancellation/resource checks and engine human review remain in
   [project #70](https://github.com/redis/redis-dbt-adapter/issues/70).

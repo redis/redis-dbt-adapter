@@ -1,0 +1,302 @@
+Parity: dbt parse
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+
+==================== Execution Summary =====================
+Finished 'parse' successfully for target 'smoke' [229ms]
+Parity: dbt build --write-catalog --full-refresh
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+ Succeeded seed  dbt_v2_parity_3147e7f82f1a.trips (table) [1 of 13 in 0.04s, 3 rows]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_incremental (incremental) [5 of 13 in 0.04s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_table (table) [3 of 13 in 0.10s]
+    Passed test  not_null_trips_incremental_id [7 of 13 in 0.07s]
+ Succeeded snapshot dbt_v2_parity_3147e7f82f1a.trips_snapshot (snapshot) [2 of 13 in 0.13s]
+    Passed test  unique_trips_incremental_id [8 of 13 in 0.08s]
+    Passed test  not_null_trips_table_id [11 of 13 in 0.04s]
+    Passed test  unique_trips_table_id [10 of 13 in 0.04s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_merge (incremental) [4 of 13 in 0.17s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.zone_totals (view) [9 of 13 in 0.05s]
+    Passed test  assert_totals [13 of 13 in 0.02s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_contract (table) [6 of 13 in 0.34s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_python (table) [12 of 13 in 0.95s, 3 rows]
+Fetching catalog from warehouse
+   Started fetching catalog (9 items)
+  Finished [  0.02s] fetching catalog (9 items)
+Fetched full catalog.json results
+Successfully wrote catalog.json
+
+==================== Execution Summary =====================
+Finished 'build' successfully for target 'smoke' [1.9s]
+Processed: 7 models | 5 tests | 1 snapshot | 1 seed
+Summary: 14 total | 13 success | 1 no-op
+Parity: dbt build --write-catalog
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+ Succeeded seed  dbt_v2_parity_3147e7f82f1a.trips (table) [1 of 13 in 0.05s, 3 rows]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_table (table) [3 of 13 in 0.20s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_merge (incremental) [4 of 13 in 0.23s]
+    Passed test  unique_trips_table_id [7 of 13 in 0.05s]
+    Passed test  not_null_trips_table_id [8 of 13 in 0.07s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_incremental (incremental) [5 of 13 in 0.31s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.zone_totals (view) [10 of 13 in 0.15s]
+    Passed test  not_null_trips_incremental_id [11 of 13 in 0.07s]
+    Passed test  unique_trips_incremental_id [12 of 13 in 0.09s]
+    Passed test  assert_totals [13 of 13 in 0.07s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_contract (table) [6 of 13 in 0.43s]
+ Succeeded snapshot dbt_v2_parity_3147e7f82f1a.trips_snapshot (snapshot) [2 of 13 in 0.61s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_python (table) [9 of 13 in 0.63s, 3 rows]
+Fetching catalog from warehouse
+   Started fetching catalog (9 items)
+  Finished [  0.03s] fetching catalog (9 items)
+Fetched full catalog.json results
+Successfully wrote catalog.json
+
+==================== Execution Summary =====================
+Finished 'build' successfully for target 'smoke' [1.7s]
+Processed: 7 models | 5 tests | 1 snapshot | 1 seed
+Summary: 14 total | 13 success | 1 no-op
+Parity: dbt run-operation assert_query --args {"sql": "select count(*) from \"dbt_v2_parity_3147e7f82f1a\".\"trips_python\" where double_trips != trips * 2", "expected": 0}
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+
+==================== Execution Summary =====================
+Finished 'run-operation' successfully for target 'smoke' [273ms]
+Parity: dbt run-operation assert_query --args {"sql": "select count(*) from \"dbt_v2_parity_3147e7f82f1a\".\"trips_python\"", "expected": 3}
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+
+==================== Execution Summary =====================
+Finished 'run-operation' successfully for target 'smoke' [258ms]
+Parity: dbt run-operation assert_exact_metadata --args {}
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+
+==================== Execution Summary =====================
+Finished 'run-operation' successfully for target 'smoke' [308ms]
+Parity: dbt run-operation violate_contract
+Parity: dbt run-operation assert_query --args {"sql": "select count(*) from \"dbt_v2_parity_3147e7f82f1a\".\"trips_contract\"", "expected": 3}
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+
+==================== Execution Summary =====================
+Finished 'run-operation' successfully for target 'smoke' [269ms]
+Parity: dbt run-operation mutate_trips --args {}
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+
+==================== Execution Summary =====================
+Finished 'run-operation' successfully for target 'smoke' [279ms]
+Parity: dbt snapshot
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+ Succeeded snapshot dbt_v2_parity_3147e7f82f1a.trips_snapshot (snapshot) [1 of 1 in 0.46s]
+
+==================== Execution Summary =====================
+Finished 'snapshot' successfully for target 'smoke' [717ms]
+Processed: 1 snapshot
+Summary: 1 total | 1 success
+Parity: dbt run-operation assert_query --args {"sql": "select count(*) from \"dbt_v2_parity_3147e7f82f1a\".\"trips_snapshot\" where id=1", "expected": 2}
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+
+==================== Execution Summary =====================
+Finished 'run-operation' successfully for target 'smoke' [262ms]
+Parity: dbt run-operation assert_query --args {"sql": "select count(*) from \"dbt_v2_parity_3147e7f82f1a\".\"trips_snapshot\" where id=2 and dbt_is_deleted='True'", "expected": 1}
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+
+==================== Execution Summary =====================
+Finished 'run-operation' successfully for target 'smoke' [266ms]
+Parity: dbt run -s trips_merge
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_merge (incremental) [1 of 1 in 0.20s]
+
+==================== Execution Summary =====================
+Finished 'run' successfully for target 'smoke' [489ms]
+Processed: 2 models
+Summary: 2 total | 1 success | 1 no-op
+Parity: dbt run-operation assert_query --args {"sql": "select count(*) from \"dbt_v2_parity_3147e7f82f1a\".\"trips_merge\" where id=1 and zone='updated'", "expected": 1}
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+
+==================== Execution Summary =====================
+Finished 'run-operation' successfully for target 'smoke' [265ms]
+Parity: dbt run-operation assert_query --args {"sql": "select count(*) from \"dbt_v2_parity_3147e7f82f1a\".\"trips_merge\"", "expected": 3}
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+
+==================== Execution Summary =====================
+Finished 'run-operation' successfully for target 'smoke' [274ms]
+Parity: dbt run -s +trips_microbatch --vars {microbatch_demo: true} --full-refresh --event-time-start 2024-01-01 --event-time-end 2024-01-03
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+ Succeeded model dbt_v2_parity_3147e7f82f1a.micro_source (view) [1 of 2 in 0.06s]
+ Succeeded batch 2024-01-01 of dbt_v2_parity_3147e7f82f1a.trips_microbatch [1 of 2 in 0.02s]
+ Succeeded batch 2024-01-02 of dbt_v2_parity_3147e7f82f1a.trips_microbatch [2 of 2 in 0.17s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_microbatch (incremental) [2 of 2 in 0.19s]
+
+==================== Execution Summary =====================
+Finished 'run' successfully for target 'smoke' [548ms]
+Processed: 2 models
+Summary: 2 total | 2 success
+Parity: dbt run -s trips_microbatch --vars {microbatch_demo: true} --event-time-start 2024-01-02 --event-time-end 2024-01-03
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+ Succeeded batch 2024-01-02 of dbt_v2_parity_3147e7f82f1a.trips_microbatch [1 of 1 in 0.19s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_microbatch (incremental) [1 of 1 in 0.23s]
+
+==================== Execution Summary =====================
+Finished 'run' successfully for target 'smoke' [523ms]
+Processed: 1 model
+Summary: 1 total | 1 success
+Parity: dbt run-operation assert_query --args {"sql": "select count(*) from \"dbt_v2_parity_3147e7f82f1a\".\"trips_microbatch\"", "expected": 2}
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+
+==================== Execution Summary =====================
+Finished 'run-operation' successfully for target 'smoke' [264ms]
+Parity: dbt run-operation assert_query --args {"sql": "select count(*) from \"dbt_v2_parity_3147e7f82f1a\".\"trips_microbatch\" where occurred_at < cast('2024-01-02' as timestamp)", "expected": 1}
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+
+==================== Execution Summary =====================
+Finished 'run-operation' successfully for target 'smoke' [270ms]
+Parity: dbt run-operation load_parity_csv --args {"path": "/private/tmp/redis-dbt-issue74-main/tmp/redis-dbt-v2-parity-or54f1bb/sample.csv.gz"}
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+
+==================== Execution Summary =====================
+Finished 'run-operation' successfully for target 'smoke' [700ms]
+Parity: dbt run-operation assert_query --args {"sql": "select count(*) from \"dbt_v2_parity_3147e7f82f1a\".\"csv_sample\"", "expected": 2}
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+
+==================== Execution Summary =====================
+Finished 'run-operation' successfully for target 'smoke' [246ms]
+Parity: dbt run-operation assert_query --args {"sql": "select cast(sum(file_row) as bigint) from \"dbt_v2_parity_3147e7f82f1a\".\"csv_sample\"", "expected": 4}
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+
+==================== Execution Summary =====================
+Finished 'run-operation' successfully for target 'smoke' [277ms]
+Parity: dbt run-operation assert_query --args {"sql": "select cast(sum(id) as bigint) from \"dbt_v2_parity_3147e7f82f1a\".\"csv_sample\"", "expected": 40}
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+
+==================== Execution Summary =====================
+Finished 'run-operation' successfully for target 'smoke' [262ms]
+Parity: dbt docs generate --write-catalog
+Running compile; pass `--no-compile` to export the existing index instead.
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+Fetching catalog from warehouse
+   Started fetching catalog (9 items)
+  Finished [  0.09s] fetching catalog (9 items)
+Fetched full catalog.json results
+Successfully wrote catalog.json
+ Succeeded seed  dbt_v2_parity_3147e7f82f1a.trips (table) [9 of 13 in 0.00s]
+ Succeeded test  not_null_trips_incremental_id (models/schema.yml:10:22) [4 of 13 in 0.01s]
+ Succeeded test  not_null_trips_table_id (models/schema.yml:6:22) [3 of 13 in 0.01s]
+ Succeeded test  unique_trips_incremental_id (models/schema.yml:10:32) [2 of 13 in 0.01s]
+ Succeeded test  unique_trips_table_id (models/schema.yml:6:32) [1 of 13 in 0.01s]
+ Succeeded test  assert_totals (tests/assert_totals.sql) [5 of 13 in 0.01s]
+ Succeeded snapshot dbt_v2_parity_3147e7f82f1a.trips_snapshot (snapshot) [6 of 13 in 0.01s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.zone_totals (view) [7 of 13 in 0.01s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_input (ephemeral) [0.01s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_incremental (incremental) [12 of 13 in 0.00s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_contract (table) [10 of 13 in 0.00s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_merge (incremental) [11 of 13 in 0.00s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_table (table) [13 of 13 in 0.00s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_python (table) [8 of 13 in 0.07s]
+ Generated /private/tmp/redis-dbt-issue74-main/tmp/redis-dbt-v2-parity-or54f1bb/target (reading info_schema/v1/) — no column lineage; rerun with `--static-analysis strict` to include it
+Host the contents of /private/tmp/redis-dbt-issue74-main/tmp/redis-dbt-v2-parity-or54f1bb/target on any static file server. Note that this publishes everything else in the target directory too, including compiled SQL and any stored test failures.
+
+==================== Execution Summary =====================
+Finished 'docs' successfully for target 'smoke' [1.4s]
+Parity: dbt build --empty --exclude-resource-type snapshot --exclude assert_totals
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+ Succeeded seed  dbt_v2_parity_3147e7f82f1a.trips (table) [1 of 11 in 0.06s, 0 rows]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_table (table) [4 of 11 in 0.24s]
+    Passed test  unique_trips_table_id [6 of 11 in 0.02s]
+    Passed test  not_null_trips_table_id [8 of 11 in 0.03s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_merge (incremental) [3 of 11 in 0.28s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.zone_totals (view) [7 of 11 in 0.09s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_incremental (incremental) [2 of 11 in 0.41s]
+    Passed test  not_null_trips_incremental_id [10 of 11 in 0.02s]
+    Passed test  unique_trips_incremental_id [11 of 11 in 0.02s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_contract (table) [5 of 11 in 0.64s]
+ Succeeded model dbt_v2_parity_3147e7f82f1a.trips_python (table) [9 of 11 in 0.63s, 0 rows]
+
+==================== Execution Summary =====================
+Finished 'build' successfully for target 'smoke' [1.3s]
+Processed: 7 models | 4 tests | 1 seed
+Summary: 12 total | 11 success | 1 no-op
+Parity: dbt run-operation assert_query --args {"sql": "select count(*) from \"dbt_v2_parity_3147e7f82f1a\".\"trips_table\"", "expected": 0}
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+
+==================== Execution Summary =====================
+Finished 'run-operation' successfully for target 'smoke' [248ms]
+Native v2 parity passed: Python, contracts, snapshots, merge, microbatch, CSV sampling, docs, catalog, and empty builds.
+Parity: dbt run-operation drop_smoke_schema
+   dbt-oss 2.0.11 (v1.1.0b1-6566-g754f0a471-modified 2026-11-16 23:07:33)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+
+==================== Execution Summary =====================
+Finished 'run-operation' successfully for target 'smoke' [323ms]
+Parity artifacts: /private/tmp/redis-dbt-issue74-main/tmp/redis-dbt-v2-parity-or54f1bb

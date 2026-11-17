@@ -91,5 +91,6 @@ native v2 Flight SQL transport in [#51](https://github.com/redis/redis-dbt-adapt
 The [reviewable Flight engine patch](engine/flight-sql.patch),
 [setup guide](FLIGHT_SQL.md), and [qualification receipt](../docs/validation/issue51-2026-11-16.md)
 now implement and test that candidate separately. It remains unmerged;
-stable-driver session isolation fails, with follow-up work tracked in
+local stable/source qualification passes after the upstream Flight session fix,
+with remaining follow-up work tracked in
 [#70](https://github.com/redis/redis-dbt-adapter/issues/70).

@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           repository: redis/redis-apache-arrow-flight
-          ref: 4d91e37135080be7f0eeb770fc89fa7adeb14bc8
+          ref: e4dcbd37322536f73ef923e0ab4b76a1abf3d4dc
           path: flight
           persist-credentials: false
       - uses: actions/setup-go@v7
