@@ -5,7 +5,6 @@
   "tracking_issue": "https://github.com/redis/redis-dbt-adapter/issues/40",
   "implementation_branch": "codex/redis-adbc-upstream",
   "implementation_commit": "1988196900588c1be955b7b0cc87cd956fa47539",
-  "flight_patch_base_commit": "754f0a47164f86226dc568096ac56906ff9d2e69",
   "flight_implementation_pull_request": "https://github.com/alberttwong/dbt/pull/4",
   "auth_verification_pull_request": "https://github.com/alberttwong/dbt/pull/5",
   "connection_pull_request": "https://github.com/alberttwong/dbt/pull/1",

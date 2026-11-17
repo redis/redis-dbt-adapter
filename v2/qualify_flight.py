@@ -11,13 +11,13 @@ import json
 import os
 from pathlib import Path
 import platform
-import re
 import socket
 import subprocess
 import sys
 import time
 
-from smoke import SmokeError, require_integration_config
+from runner import SmokeError, require_integration_config
+from verify_engine import verify
 from publication_proxy import PublicationProxy
 from flight_refusal import qualify_refusals
 from flight_cancellation import qualify_cancellation
@@ -52,25 +52,10 @@ def qualify(args):
            "DBT_SEND_ANONYMOUS_USAGE_STATS": "false", "DBT_ALLOW_EXPERIMENTAL_ADAPTERS": "yes"}
     evidence = {
         "status": "incomplete", "platform": platform.platform(), "python": sys.version,
-        "engine_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=engine, text=True).strip(),
-        "engine_patch_sha256": digest(ROOT / "v2/engine/flight-sql.patch"),
+        **verify(engine),
         "dbt_version": subprocess.check_output([str(binary), "--version"], text=True).strip(),
         "dbt_sha256": digest(binary), "flight_client_sha256": digest(client), "checks": {},
     }
-    patch = ROOT / "v2/engine/flight-sql.patch"
-    sources = json.loads((ROOT / "v2/upstream.json").read_text())
-    if evidence["engine_commit"] == sources["implementation_commit"]:
-        if subprocess.check_output(["git", "diff", "HEAD", "--name-only"], cwd=engine):
-            raise ValueError("Pinned engine must have no tracked source changes")
-        evidence["engine_source_state"] = "merged-pinned"
-    elif evidence["engine_commit"] == sources["flight_patch_base_commit"]:
-        evidence["engine_source_state"] = "historical-base-with-patch"
-    else:
-        raise ValueError("Engine HEAD must match the merged pin or historical patch base")
-    subprocess.run(["git", "apply", "--reverse", "--check", str(patch)],
-                   cwd=engine, check=True, capture_output=True)
-    paths = re.findall(r"^\+\+\+ b/(.+)$", patch.read_text(), re.M)
-    evidence["engine_source_files"] = {path: digest(engine / path) for path in paths}
     evidence["cargo_lock_sha256"] = digest(engine / "Cargo.lock")
     evidence["rustc"] = subprocess.check_output(["rustc", "--version"], cwd=engine, text=True).strip()
     evidence["integration_commit"] = subprocess.check_output(
@@ -78,7 +63,7 @@ def qualify(args):
     runner_paths = [*sorted((ROOT / "v2").glob("*.py")), ROOT / "v2/flight_profiles.yml",
                     ROOT / "v2/upstream.json", ROOT / "scripts/build_flight_server.py"]
     evidence["runner_source_files"] = {str(p.relative_to(ROOT)): digest(p) for p in runner_paths}
-    for path in [*runner_paths, patch]:
+    for path in runner_paths:
         snapshot = output / "source" / path.relative_to(ROOT)
         snapshot.parent.mkdir(parents=True, exist_ok=True)
         snapshot.write_bytes(path.read_bytes())

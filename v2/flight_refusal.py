@@ -11,7 +11,7 @@ import subprocess
 import tempfile
 import uuid
 
-from smoke import SmokeError, configure_transport
+from runner import SmokeError, configure_transport
 
 
 def qualify_refusals(binary, engine, env, gate, output):

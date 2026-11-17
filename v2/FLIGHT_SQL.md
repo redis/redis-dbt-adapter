@@ -3,8 +3,8 @@
 This is an experimental implementation for [#51](https://github.com/redis/redis-dbt-adapter/issues/51),
 included in the merged engine commit pinned by [upstream.json](upstream.json).
 Both direct Redis and Flight SQL are compiled into that engine; no patch is
-needed for a fresh checkout. The historical [engine patch](engine/flight-sql.patch)
-is retained to reproduce earlier evidence. Broader native v2 Flight support
+needed for a fresh checkout. The historical [engine patch](https://github.com/redis/redis-dbt-adapter/blob/dc4325561f43c91f7347f7dd816a68fc1494d2a8/v2/engine/flight-sql.patch)
+is available at that immutable revision to reproduce earlier evidence. Broader native v2 Flight support
 qualification remains in #51.
 After [Flight PR #75](https://github.com/redis/redis-apache-arrow-flight/pull/75)
 resolved the session reset in #74, full local qualification passes with both
@@ -35,9 +35,17 @@ the public auth-verification Markdown correction from
 [engine PR #5](https://github.com/alberttwong/dbt/pull/5). Its runtime sources are
 unchanged from the qualified Flight implementation; the only differences from
 `3f285a37312c6ccab44a16b71d831c49e35417bd` are the auth README and AGENTS guidance.
-`apply_engine_patch.py` verifies the clean merged checkout without modifying it;
-it still supports the historical patch base recorded in `upstream.json` for
-reproduction. Automated validation does not establish human auth verification.
+`python3 v2/verify_engine.py --engine /path/to/dbt-engine` verifies the clean
+pinned checkout without modifying it. New qualification accepts only that
+immutable engine commit and records its committed Git tree ID, binary digests
+and dependency lock. Automated validation does not establish human auth verification.
+
+For historical base-plus-patch reproduction, use the [original helper](https://github.com/redis/redis-dbt-adapter/blob/dc4325561f43c91f7347f7dd816a68fc1494d2a8/v2/apply_engine_patch.py)
+and [configuration](https://github.com/redis/redis-dbt-adapter/blob/dc4325561f43c91f7347f7dd816a68fc1494d2a8/v2/upstream.json)
+at the same immutable integration revision. The old patch base was
+`754f0a47164f86226dc568096ac56906ff9d2e69`; patch SHA-256 was
+`2f1468ffeb7078de701685ecd609bcd734bae1cce259bd8104e40ee7846cb9f0`.
+Historical qualification receipts remain unchanged.
 
 Install the separate Apache ADBC Flight client library:
 
@@ -138,7 +146,7 @@ topology/TLS/auth checks and Redis/version information; without it the receipt
 does not establish the backend's deployment identity.
 
 The runner retains resolved source and runtime versions, binary and source
-digests, the patch, dependency lock, CLI logs, cancellation result and parity
+digests, the committed engine tree ID, dependency lock, CLI logs, cancellation result and parity
 artifacts. It stops its own server on success or failure. Fixtures create/drop
 random owned schemas. A failing assertion remains a failed qualification.
 The [manual Linux workflow](../.github/workflows/v2-flight.yml) uploads receipts

@@ -88,7 +88,7 @@ in [#63](https://github.com/redis/redis-dbt-adapter/issues/63), CLA/fork-CI appr
 in [#64](https://github.com/redis/redis-dbt-adapter/issues/64), and the unsupported
 native v2 Flight SQL transport in [#51](https://github.com/redis/redis-dbt-adapter/issues/51).
 
-The [reviewable Flight engine patch](engine/flight-sql.patch),
+The [historical Flight engine patch](https://github.com/redis/redis-dbt-adapter/blob/dc4325561f43c91f7347f7dd816a68fc1494d2a8/v2/engine/flight-sql.patch),
 [setup guide](FLIGHT_SQL.md), and [qualification receipt](../docs/validation/issue51-2026-11-16.md)
 document the Flight implementation now merged in
 [engine PR #4](https://github.com/alberttwong/dbt/pull/4) and selected by the

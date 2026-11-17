@@ -2,14 +2,11 @@
 """Run the complete taxi example and demos on native v2 in isolated schemas."""
 import argparse
 import json
-import os
 from pathlib import Path
 import shutil
 import subprocess
-import tempfile
-import uuid
 
-from smoke import require_integration_config, SmokeError, check_version
+from runner import SmokeError, dbt_project
 
 
 def check_build(target, *, allow_warnings=True):
@@ -36,11 +33,12 @@ def check_build(target, *, allow_warnings=True):
 
 
 def run_taxi(binary, csv_path, keep_artifacts=False):
-    require_integration_config()
-    check_version(subprocess.run([binary, '--version'], capture_output=True, text=True, check=True).stdout)
-    csv_path = Path(csv_path).resolve(strict=True)
-    directory = Path(tempfile.mkdtemp(prefix='redis-dbt-v2-taxi-'))
-    project, target = directory / 'project', directory / 'target'
+    with dbt_project(binary, "taxi", keep_artifacts=keep_artifacts, cleanup="drop_taxi_schemas") as session:
+        _run_taxi(session, Path(csv_path).resolve(strict=True))
+
+
+def _run_taxi(session, csv_path):
+    project, target = session.project, session.target
     source = Path(__file__).resolve().parents[1] / 'v1'
     project.mkdir()
     for name in ['models', 'seeds', 'tests', 'macros', 'analyses', 'snapshots', 'redis_adbc_utils']:
@@ -67,18 +65,9 @@ def run_taxi(binary, csv_path, keep_artifacts=False):
   {% endfor %}
 {% endmacro %}
 ''')
-    schema = 'dbt_v2_taxi_' + uuid.uuid4().hex[:12]
-    env = os.environ.copy()
-    env.update(REDIS_DBT_V2_SCHEMA=schema, DBT_ALLOW_EXPERIMENTAL_ADAPTERS='yes',
-               DBT_SEND_ANONYMOUS_USAGE_STATS='false', DBT_LOG_PATH=str(directory / 'logs'))
-    variables = {'raw_trips_path': str(csv_path)}
-    common = ['--project-dir', str(project), '--profiles-dir', str(project), '--target-path', str(target)]
-    parsed = False
-
-    def run(*args, extra_vars=None):
-        print('Taxi: dbt ' + ' '.join(args), flush=True)
-        subprocess.run([binary, *args, '--vars', json.dumps({**variables, **(extra_vars or {})}), *common],
-                       cwd=project, env=env, check=True)
+    schema = session.env['REDIS_DBT_V2_SCHEMA']
+    session.variables = {'raw_trips_path': str(csv_path)}
+    run = session.run
 
     def assert_query(sql, expected):
         run('run-operation', 'assert_query', '--args', json.dumps({'sql': sql, 'expected': expected}))
@@ -86,46 +75,35 @@ def run_taxi(binary, csv_path, keep_artifacts=False):
     def table(suffix, name):
         return f'"{schema}_{suffix}"."{name}"'
 
-    try:
-        run('deps')
-        run('parse')
-        parsed = True
-        run('seed', '--full-refresh')
-        run('run-operation', 'load_raw_trips')
-        (target / 'run_results.json').unlink(missing_ok=True)
-        run('build', '--write-catalog')
-        check_build(target)
-        run('docs', 'generate', '--write-catalog')
-        catalog = json.loads((target / 'catalog.json').read_text())
-        if catalog.get('errors') or 'model.nyc_taxi.fct_trips' not in catalog['nodes']:
-            raise SmokeError('Taxi catalog is incomplete')
-        run('run', '-s', '+agg_zone_daily', '--full-refresh', extra_vars={'trips_end': '2019-01-16 00:00:00'})
-        run('run', '-s', '+agg_zone_daily')
-        assert_query(f'select (select count(*) from {table("marts", "fct_trips")}) - (select sum(trips) from {table("marts", "agg_zone_daily")})', 0)
-        run('snapshot')
-        run('run-operation', 'rename_zone', '--args', '{location_id: 132, name: "JFK International Airport"}')
-        run('snapshot')
-        assert_query(f'select count(*) from {table("snapshots", "zones_snapshot")} where "LocationID"=132', 2)
-        run('seed')
-        run('run', '-s', 'fct_trips_microbatch', '--full-refresh', '--event-time-start', '2019-01-01', '--event-time-end', '2019-01-04', extra_vars={'microbatch_demo': True})
-        run('run', '-s', 'fct_trips_microbatch', '--event-time-start', '2019-01-02', '--event-time-end', '2019-01-03', extra_vars={'microbatch_demo': True})
-        assert_query(f'select count(distinct pickup_date) from {table("marts", "fct_trips_microbatch")}', 3)
-        assert_query(f"select (select count(*) from {table('marts','fct_trips_microbatch')} where pickup_date=cast('2019-01-02' as date)) - (select count(*) from {table('staging','stg_yellow_trips')} where pickup_date=cast('2019-01-02' as date))", 0)
-        run('build', '--empty', '--exclude-resource-type', 'snapshot')
-        # Snapshot is intentionally outside the empty build selection.
-        results = json.loads((target / 'run_results.json').read_text())['results']
-        if any(row['status'] not in {'success', 'pass'} for row in results):
-            raise SmokeError('Taxi empty build contained unsuccessful results')
-        print('Full native taxi project, packages, Python, incremental/snapshot/microbatch demos, docs, and empty build passed.', flush=True)
-    finally:
-        try:
-            if parsed:
-                run('run-operation', 'drop_taxi_schemas')
-        finally:
-            if keep_artifacts:
-                print('Taxi artifacts: ' + str(directory), flush=True)
-            else:
-                shutil.rmtree(directory)
+    run('deps')
+    run('parse')
+    run('seed', '--full-refresh')
+    run('run-operation', 'load_raw_trips')
+    (target / 'run_results.json').unlink(missing_ok=True)
+    run('build', '--write-catalog')
+    check_build(target)
+    run('docs', 'generate', '--write-catalog')
+    catalog = json.loads((target / 'catalog.json').read_text())
+    if catalog.get('errors') or 'model.nyc_taxi.fct_trips' not in catalog['nodes']:
+        raise SmokeError('Taxi catalog is incomplete')
+    run('run', '-s', '+agg_zone_daily', '--full-refresh', extra_vars={'trips_end': '2019-01-16 00:00:00'})
+    run('run', '-s', '+agg_zone_daily')
+    assert_query(f'select (select count(*) from {table("marts", "fct_trips")}) - (select sum(trips) from {table("marts", "agg_zone_daily")})', 0)
+    run('snapshot')
+    run('run-operation', 'rename_zone', '--args', '{location_id: 132, name: "JFK International Airport"}')
+    run('snapshot')
+    assert_query(f'select count(*) from {table("snapshots", "zones_snapshot")} where "LocationID"=132', 2)
+    run('seed')
+    run('run', '-s', 'fct_trips_microbatch', '--full-refresh', '--event-time-start', '2019-01-01', '--event-time-end', '2019-01-04', extra_vars={'microbatch_demo': True})
+    run('run', '-s', 'fct_trips_microbatch', '--event-time-start', '2019-01-02', '--event-time-end', '2019-01-03', extra_vars={'microbatch_demo': True})
+    assert_query(f'select count(distinct pickup_date) from {table("marts", "fct_trips_microbatch")}', 3)
+    assert_query(f"select (select count(*) from {table('marts','fct_trips_microbatch')} where pickup_date=cast('2019-01-02' as date)) - (select count(*) from {table('staging','stg_yellow_trips')} where pickup_date=cast('2019-01-02' as date))", 0)
+    run('build', '--empty', '--exclude-resource-type', 'snapshot')
+    # Snapshot is intentionally outside the empty build selection.
+    results = json.loads((target / 'run_results.json').read_text())['results']
+    if any(row['status'] not in {'success', 'pass'} for row in results):
+        raise SmokeError('Taxi empty build contained unsuccessful results')
+    print('Full native taxi project, packages, Python, incremental/snapshot/microbatch demos, docs, and empty build passed.', flush=True)
 
 
 def main():

@@ -9,16 +9,12 @@ import argparse
 import json
 import os
 from pathlib import Path
-import re
 import shutil
 import subprocess
 import sys
-import tempfile
-import uuid
 
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from integration_config import require_integration_config
+from runner import SmokeError, check_version, configure_transport, dbt_project
 
 
 PROJECT = "redis_dbt_v2_smoke"
@@ -35,16 +31,6 @@ GENERIC_TEST_PREFIXES = {
     for test in ("not_null", "unique")
     for model in ("trips_table", "trips_incremental")
 }
-
-
-class SmokeError(Exception):
-    pass
-
-
-def check_version(output):
-    # Both OSS and the full distribution are usable; Python Core 1.x is not.
-    if not re.search(r"\bdbt(?:-oss|-fusion)?\s+(?:version\s*[:=]?\s*)?v?2\.\d+", output, re.I):
-        raise SmokeError("Expected a dbt v2 executable; pass its path with --dbt.")
 
 
 def check_results(path):
@@ -67,89 +53,21 @@ def check_results(path):
         raise SmokeError(f"Incomplete build: missing={sorted(missing)}, unsuccessful={failed}")
 
 
-def configure_transport(project, env, transport):
-    if transport == "redis":
-        return
-    if transport != "flightsql":
-        raise SmokeError("Unknown Redis transport")
-    from urllib.parse import urlsplit
-    required = ("FLIGHT_SQL_DRIVER", "FLIGHT_SQL_URI", "FLIGHT_SQL_USERNAME",
-                "FLIGHT_SQL_PASSWORD", "FLIGHT_SQL_TLS_CA_FILE")
-    if any(not env.get(key, "").strip() for key in required):
-        raise SmokeError("Flight qualification requires " + ", ".join(required))
-    try:
-        uri = urlsplit(env["FLIGHT_SQL_URI"])
-        valid = (uri.scheme == "grpc+tls" and uri.hostname and uri.port
-                 and not uri.username and not uri.password and not uri.query
-                 and not uri.fragment and uri.path in ("", "/"))
-    except ValueError:
-        valid = False
-    if not valid:
-        raise SmokeError("Flight qualification requires grpc+tls://host:port without URI credentials")
-    for key in ("FLIGHT_SQL_DRIVER", "FLIGHT_SQL_TLS_CA_FILE"):
-        path = Path(env[key])
-        if not path.is_absolute() or not path.is_file():
-            raise SmokeError(key + " must be an absolute existing file")
-    shutil.copyfile(Path(__file__).with_name("flight_profiles.yml"), project / "profiles.yml")
-
-
 def run_smoke(binary, *, build=False, transport="redis"):
-    if build:
-        require_integration_config()
-    version = subprocess.run([binary, "--version"], capture_output=True, text=True, check=True)
-    check_version(version.stdout + version.stderr)
-    print(version.stdout.strip(), flush=True)
-
-    env = os.environ.copy()
-    if not build:
-        # Profile rendering still needs values; parse never opens a connection.
-        env.setdefault("REDIS_URI", "rediss://parse-only.invalid:6380/0")
-        env.setdefault("REDIS_USERNAME", "parse-only")
-        env.setdefault("REDIS_PASSWORD", "parse-only")
-    # Never accept an externally supplied schema: cleanup must only drop ours.
-    env["REDIS_DBT_V2_SCHEMA"] = "dbt_v2_smoke_" + uuid.uuid4().hex[:12]
-    env["DBT_ALLOW_EXPERIMENTAL_ADAPTERS"] = "yes"
-    env["DBT_SEND_ANONYMOUS_USAGE_STATS"] = "false"
-
-    with tempfile.TemporaryDirectory(prefix="redis-dbt-v2-") as directory:
-        project = Path(directory) / "project"
-        shutil.copytree(Path(__file__).parent / "smoke", project)
-        configure_transport(project, env, transport)
-        # Keep all artifacts and logs outside the v1 project.
-        env["DBT_LOG_PATH"] = str(Path(directory) / "logs")
-        target = Path(directory) / "target"
-        common = ["--project-dir", str(project), "--profiles-dir", str(project), "--target-path", str(target)]
-
-        def invoke(*args):
-            print("Running dbt " + " ".join(args), flush=True)
-            subprocess.run([binary, *args, *common], env=env, check=True)
-
-        # Do not attempt any warehouse work or cleanup if profile loading fails.
-        invoke("parse")
+    with dbt_project(binary, "smoke", live=build) as session:
+        shutil.copytree(Path(__file__).parent / "smoke", session.project)
+        configure_transport(session.project, session.env, transport)
+        session.run("parse")
         if not build:
             print("Parse passed. Redis execution has not been tested; use --build to test it.")
             return
-
-        print("Using isolated schema " + env["REDIS_DBT_V2_SCHEMA"], flush=True)
-        build_error = None
-        try:
-            for args in [("build", "--full-refresh"), ("build",)]:
-                # Never accept stale results from the previous invocation.
-                results_path = target / "run_results.json"
-                results_path.unlink(missing_ok=True)
-                invoke(*args)
-                check_results(results_path)
-        except (OSError, subprocess.CalledProcessError, SmokeError) as exc:
-            build_error = exc
-            raise
-        finally:
-            try:
-                invoke("run-operation", "drop_smoke_schema")
-            except (OSError, subprocess.CalledProcessError):
-                print("Cleanup failed; remove schema " + env["REDIS_DBT_V2_SCHEMA"], file=sys.stderr)
-                if build_error is None:
-                    raise
-        print("Redis v2 smoke builds and cleanup passed.")
+        print("Using isolated schema " + session.env["REDIS_DBT_V2_SCHEMA"], flush=True)
+        for args in [("build", "--full-refresh"), ("build",)]:
+            results_path = session.target / "run_results.json"
+            results_path.unlink(missing_ok=True)
+            session.run(*args)
+            check_results(results_path)
+    print("Redis v2 smoke builds and cleanup passed.")
 
 
 def main():

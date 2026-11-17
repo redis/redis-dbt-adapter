@@ -71,7 +71,7 @@ jobs:
         run: python3 -m unittest discover -s v2/tests -v
       - name: Verify and build the pinned Flight engine
         run: |
-          python3 v2/apply_engine_patch.py --engine engine
+          python3 v2/verify_engine.py --engine engine
           python3 -m unittest discover -s engine/crates/dbt-adapter/tests/python -v
           cd engine
           cargo build -p dbt-sa-cli

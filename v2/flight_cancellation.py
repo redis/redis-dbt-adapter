@@ -12,7 +12,7 @@ import time
 from urllib.parse import urlsplit
 
 from publication_proxy import command_frame, read_frame
-from smoke import SmokeError
+from runner import SmokeError
 
 
 def decode(stream):
