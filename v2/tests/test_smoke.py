@@ -75,6 +75,13 @@ class ResultTests(unittest.TestCase):
 
 class RunnerTests(unittest.TestCase):
     def setUp(self):
+        environment = patch.dict(os.environ, {
+            "REDIS_URI": "rediss://enterprise.test.invalid:6380/0",
+            "REDIS_USERNAME": "integration-user",
+            "REDIS_PASSWORD": "unit-test-placeholder",
+        })
+        environment.start()
+        self.addCleanup(environment.stop)
         self.calls = []
         self.envs = []
         self.output = io.StringIO()

@@ -5,9 +5,11 @@ redis_dbt_v2_smoke:
     smoke:
       type: redis_adbc
       driver: "{{ env_var('REDIS_ADBC_DRIVER', '') }}"
-      uri: "{{ env_var('REDIS_URI', 'redis://localhost:6380/0') }}"
-      username: "{{ env_var('REDIS_USERNAME', '') }}"
-      password: "{{ env_var('REDIS_PASSWORD', '') }}"
+      uri: "{{ env_var('REDIS_URI') }}"
+      username: "{{ env_var('REDIS_USERNAME') }}"
+      driver_options:
+        adbc.redis.tls_ca_file: "{{ env_var('REDIS_TLS_CA_FILE', '') }}"
+      password: "{{ env_var('REDIS_PASSWORD') }}"
       database: redis
       schema: "{{ env_var('REDIS_DBT_V2_SCHEMA') }}"
       threads: 2

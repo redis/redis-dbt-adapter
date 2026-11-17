@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 import uuid
 
-from smoke import SmokeError, check_version
+from smoke import require_integration_config, SmokeError, check_version
 
 
 def check_build(target, *, allow_warnings=True):
@@ -36,6 +36,7 @@ def check_build(target, *, allow_warnings=True):
 
 
 def run_taxi(binary, csv_path, keep_artifacts=False):
+    require_integration_config()
     check_version(subprocess.run([binary, '--version'], capture_output=True, text=True, check=True).stdout)
     csv_path = Path(csv_path).resolve(strict=True)
     directory = Path(tempfile.mkdtemp(prefix='redis-dbt-v2-taxi-'))

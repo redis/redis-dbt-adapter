@@ -25,12 +25,15 @@ instance on macOS arm64. These results do not test dbt-postgres against Redis.
 
 ## Index acceptance
 
-Run from `v1/`, using a fresh isolated Redis database:
+To reproduce on the merged branch, configure a dedicated authenticated TLS
+Enterprise test endpoint as described in `../scripts/README.md`, then run from
+`v1/`:
 
 ```sh
 uv sync --locked
 ./scripts/download_driver.sh
-REDIS_URI=redis://127.0.0.1:16380/0 uv run pytest adapter/tests/functional/test_indexes.py -q
+python ../scripts/integration_config.py
+uv run pytest adapter/tests/functional/test_indexes.py -q
 ```
 
 **Result: 16 passed in 15.59 seconds** on the locked dependencies.
@@ -69,7 +72,7 @@ CREATE INDEX "dbt_idx_5c3f7c9773b48be4639dec3b58fcc9a9" ON "issue38"."indexed" U
 CREATE INDEX "dbt_idx_eebf8e9bd6385fea8069bbd55575a00d" ON "issue38"."indexed" USING redis_search ("id", "name")
 ```
 
-## Broader compatibility limits
+## Historical compatibility results before merging current main
 
 The latest driver's managed snapshots reject storage initialized by older
 formats without modifying it. Validation used a fresh isolated database after
@@ -77,19 +80,33 @@ observing that error against the disposable v0.0.20 test storage. This is not an
 automatic migration; existing deployments must reload their data into a
 compatible fresh database.
 
-The full suite with four pytest workers failed: **93 failed, 56 passed,
+On the original base above, the full suite with four pytest workers failed: **93 failed, 56 passed,
 26 skipped, 62 errors**. Widespread failures include `snapshot catalog changed
 concurrently; retry the statement` (`SQLSTATE 40001`) in setup, seed and model
-operations, including tests without index configuration. Concurrent catalog
-mutations therefore remain a compatibility limitation with the latest release;
-this change does not add automatic replay of potentially committed statements.
+operations, including tests without index configuration. These results describe the original adapter base, before the safe-publication
+retry changes subsequently merged from current main.
 
 A repeat without pytest workers also failed: **37 failed, 167 passed,
 26 skipped, 2 errors** in 224.21 seconds. The dbt test profile still uses four
 model threads, and catalog conflicts also occur within a single dbt run.
 The index tests all passed in this run as well. This is not a claim that the
-full adapter suite or parallel model execution is compatible with v0.0.27.
+full adapter suite or parallel model execution was compatible with v0.0.27
+on the original base.
 
 The v2 runner unit tests pass (14 tests). The v2 driver pin is updated to match
 v1, but the native v2 engine/parity and full NYC taxi project were not rerun here.
 Historical v2 validation records retain the versions actually used.
+
+## Integration with current main
+
+Merged repository main `0f762e4a77441eee4c6f9cf25f7166397fe42b0a` into this
+branch when preparing the PR. This brings in adapter 0.3.1, safe-publication
+retries and the authenticated TLS Enterprise integration policy. The driver
+settings retain main's `latest` resolver rather than pinning an older release.
+The historical failures above predate those retries. The original native index
+results remain evidence for the index implementation; live integration was not
+rerun after this merge because no dedicated authenticated TLS Enterprise
+endpoint is configured in this session.
+
+After merging main: **28 adapter unit tests passed**, **24 v2 runner tests
+passed**, and `git diff --check` passed.

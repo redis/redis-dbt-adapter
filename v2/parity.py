@@ -10,10 +10,11 @@ import subprocess
 import tempfile
 import uuid
 
-from smoke import SmokeError, check_results, check_version
+from smoke import require_integration_config, SmokeError, check_results, check_version
 
 
 def run_parity(binary, keep_artifacts=False):
+    require_integration_config()
     version = subprocess.run([binary, '--version'], capture_output=True, text=True, check=True)
     check_version(version.stdout + version.stderr)
     directory = Path(tempfile.mkdtemp(prefix='redis-dbt-v2-parity-'))

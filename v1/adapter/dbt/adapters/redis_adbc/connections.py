@@ -1,14 +1,18 @@
 """Connection management: dbt <-> Redis ADBC driver via adbc_driver_manager's DB-API."""
 
 import os
+import random
 import sys
+import tempfile
+import time
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, Optional, Set, Tuple, Union
+from typing import Any, Dict, Iterable, Literal, Optional, Set, Tuple, Union
 from urllib.parse import urlsplit, urlunsplit
 
 import adbc_driver_manager
 import adbc_driver_manager.dbapi as dbapi
+import sqlparse
 from adbc_driver_manager import AdbcStatusCode
 from dbt_common.exceptions import DbtDatabaseError, DbtRuntimeError
 
@@ -35,6 +39,8 @@ _PROFILE_OPTIONS = {
 # Unknown profile keys already warned about (profiles can load more than once).
 _warned_keys: Set[str] = set()
 
+_FLIGHT_COOKIES = "adbc.flight.sql.rpc.with_cookie_middleware"
+
 
 def _option_value(value: Any) -> str:
     # ADBC options are strings; booleans as the driver spells them.
@@ -45,6 +51,7 @@ def _option_value(value: Any) -> str:
 
 @dataclass
 class RedisAdbcCredentials(Credentials):
+    transport: Literal["redis", "flightsql"] = "redis"
     # Path to libadbc_driver_redis.{so,dylib,dll}; falls back to $REDIS_ADBC_DRIVER.
     driver: Optional[str] = None
     uri: str = "redis://localhost:6379/0"
@@ -84,7 +91,22 @@ class RedisAdbcCredentials(Credentials):
                 )
             if not isinstance(value, (str, int, float, bool)):
                 raise DbtRuntimeError(f"driver_options: {option} must be a string, number or boolean")
+        if data.get("transport") == "flightsql":
+            cls._validate_flight_options(data)
         return data
+
+    @staticmethod
+    def _validate_flight_options(data):
+        if not data.get("uri", "").startswith(("grpc://", "grpc+tls://")):
+            raise DbtRuntimeError("Flight SQL requires a grpc:// or grpc+tls:// uri")
+        for name in ("aggregate_pushdown", "rename_rekey", "read_timeout", "write_timeout"):
+            if data.get(name) not in (None, ""):
+                raise DbtRuntimeError(f"Flight SQL: configure `{name}` on the Flight server")
+        for option, value in (data.get("driver_options") or {}).items():
+            if option.startswith("adbc.redis."):
+                raise DbtRuntimeError(f"Flight SQL: configure `{option}` on the Flight server")
+            if option == _FLIGHT_COOKIES and _option_value(value) != "true":
+                raise DbtRuntimeError("Flight SQL requires cookie middleware for dbt sessions")
 
     @classmethod
     def validate(cls, data):
@@ -102,6 +124,7 @@ class RedisAdbcCredentials(Credentials):
 
     def _connection_keys(self) -> Tuple[str, ...]:
         return (
+            "transport",
             "driver",
             "uri",
             "database",
@@ -118,9 +141,20 @@ class RedisAdbcCredentials(Credentials):
     def connection_info(self, *, with_aliases: bool = False) -> Iterable[Tuple[str, Any]]:
         # dbt debug prints these and logs them: never the URI's password.
         for key, value in super().connection_info(with_aliases=with_aliases):
+            if key == "driver_options" and value:
+                # Flight options can contain bearer tokens or private keys.
+                value = {option: "<redacted>" for option in value}
             yield key, _redact_uri(value) if key == "uri" and value else value
 
     def driver_path(self) -> str:
+        if self.transport == "flightsql" and not self.driver:
+            try:
+                import adbc_driver_flightsql
+            except ImportError as e:
+                raise DbtRuntimeError(
+                    "Install dbt-redis-adbc[flightsql] or set `driver` to the Flight SQL library"
+                ) from e
+            return adbc_driver_flightsql._driver_path()
         path = self.driver or os.environ.get("REDIS_ADBC_DRIVER")
         if not path:
             raise DbtRuntimeError(
@@ -135,6 +169,14 @@ class RedisAdbcCredentials(Credentials):
     def db_kwargs(self) -> Dict[str, str]:
         """The driver's database options for this profile."""
         kwargs = {option: _option_value(v) for option, v in (self.driver_options or {}).items()}
+        if self.transport == "flightsql":
+            self._validate_flight_options(vars(self))
+            kwargs[_FLIGHT_COOKIES] = "true"
+            for name in ("uri", "username", "password"):
+                value = getattr(self, name)
+                if value is not None and value != "":
+                    kwargs[name] = value
+            return kwargs
         for option, name in _PROFILE_OPTIONS.items():
             value = getattr(self, name)
             # None, or "" from an unset env_var, leaves the driver's default.
@@ -159,20 +201,92 @@ def _redact_uri(uri: str, keep_user: bool = True) -> str:
     return urlunsplit((parts.scheme, host, parts.path, parts.query, parts.fragment))
 
 
+class RedisAdbcCursor:
+    """Retry native refused publications, without replaying committed SQL/input."""
+
+    def __init__(self, conn):
+        self._conn = conn
+        self._cursor = conn.cursor()
+
+    def __getattr__(self, name):
+        return getattr(self._cursor, name)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self._cursor.close()
+
+    def _publish(self, action, replayable):
+        for attempt in range(20):
+            try:
+                return action()
+            except adbc_driver_manager.OperationalError as error:
+                # This specific 40001 is a refused publication, not an unknown
+                # commit outcome. Other errors and consumed input must surface.
+                if not (
+                    replayable
+                    and error.sqlstate == "40001"
+                    and "snapshot catalog changed concurrently; retry the statement" in str(error)
+                    and attempt < 19
+                ):
+                    raise
+                self._cursor.close()
+                self._cursor = self._conn.cursor()
+                delay = random.uniform(0.05, 0.1) * min(2 ** attempt, 16)
+                logger.debug(f"Redis ADBC: retrying snapshot publication conflict in {delay:.2f}s")
+                time.sleep(delay)
+
+    def execute(self, operation, parameters=None, **kwargs):
+        if parameters is not None:
+            return self._cursor.execute(operation, parameters, **kwargs)
+        # The native driver autocommits each statement in a script. Split first
+        # so a conflict never replays an earlier statement that already committed.
+        for statement in sqlparse.split(operation) or [operation]:
+            self._publish(lambda: self._cursor.execute(statement, **kwargs), replayable=True)
+        return self
+
+    def adbc_ingest(self, table_name, data, **kwargs):
+        import pyarrow as pa
+
+        if isinstance(data, pa.RecordBatchReader):
+            # Capture a one-shot reader once, without holding its entire result
+            # in memory. Every attempt opens fresh input from the private spool.
+            with tempfile.TemporaryFile() as spool:
+                with pa.ipc.new_file(spool, data.schema) as writer:
+                    for batch in data:
+                        writer.write_batch(batch)
+
+                def ingest():
+                    spool.seek(0)
+                    saved = pa.ipc.open_file(spool)
+                    batches = (saved.get_batch(i) for i in range(saved.num_record_batches))
+                    with pa.RecordBatchReader.from_batches(saved.schema, batches) as reader:
+                        return self._cursor.adbc_ingest(table_name, reader, **kwargs)
+
+                return self._publish(ingest, replayable=True)
+        # Tables supply fresh Arrow input; unknown stream types are not replayed.
+        return self._publish(
+            lambda: self._cursor.adbc_ingest(table_name, data, **kwargs),
+            replayable=isinstance(data, pa.Table),
+        )
+
+
 class RedisAdbcHandle:
     """Wraps an ADBC DB-API connection so cursors dbt never closes get closed.
 
     ADBC refuses to close a connection while it still has open statements.
     """
 
-    def __init__(self, conn: dbapi.Connection):
+    def __init__(self, conn: dbapi.Connection, native: bool = True):
         self.conn = conn
+        self.native = native
         self._cursors: list = []
 
     def cursor(self):
         # Close finished cursors eagerly so statements don't pile up.
         self._cursors = [c for c in self._cursors if not c._closed]
-        cur = self.conn.cursor()
+        cur = RedisAdbcCursor(self.conn) if self.native else self.conn.cursor()
         self._cursors.append(cur)
         return cur
 
@@ -237,7 +351,22 @@ class RedisAdbcConnectionManager(SQLConnectionManager):
 
         def connect():
             conn = dbapi.connect(driver=creds.driver_path(), db_kwargs=creds.db_kwargs(), autocommit=True)
-            return RedisAdbcHandle(conn)
+            if creds.transport == "flightsql":
+                try:
+                    # Prime the cookie before SET: the server starts a session
+                    # on the first request that returns its cookie.
+                    with conn.cursor() as cursor:
+                        cursor.execute("SELECT 1")
+                        cursor.fetchall()
+                        schema = creds.schema.replace('"', '""')
+                        cursor.execute(f'SET search_path TO "{schema}"')
+                        if creds.time_zone:
+                            zone = creds.time_zone.replace("'", "''")
+                            cursor.execute(f"SET TIME ZONE '{zone}'")
+                except Exception:
+                    conn.close()
+                    raise
+            return RedisAdbcHandle(conn, native=creds.transport == "redis")
 
         return cls.retry_connection(
             connection,

@@ -1,0 +1,28 @@
+:root {
+  --redis-red: #b82219;
+}
+
+.wy-side-nav-search,
+.wy-nav-top {
+  background: var(--redis-red);
+}
+
+.wy-nav-content {
+  max-width: 1100px;
+}
+
+.rst-content a {
+  color: #a61c15;
+}
+
+.rst-content pre {
+  overflow-x: auto;
+}
+
+.rst-content table.docutils {
+  width: 100%;
+}
+
+.rst-content table.docutils td {
+  white-space: normal;
+}
