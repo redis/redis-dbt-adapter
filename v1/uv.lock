@@ -302,6 +302,7 @@ dependencies = [
     { name = "adbc-driver-manager" },
     { name = "dbt-adapters" },
     { name = "dbt-core" },
+    { name = "mashumaro" },
     { name = "opentelemetry-api" },
     { name = "pyarrow" },
     { name = "sqlparse" },
@@ -311,8 +312,9 @@ dependencies = [
 requires-dist = [
     { name = "adbc-driver-flightsql", marker = "extra == 'flightsql'", specifier = ">=1.6,<2" },
     { name = "adbc-driver-manager", specifier = ">=1.6,<2" },
-    { name = "dbt-adapters", specifier = ">=1.16,<2" },
-    { name = "dbt-core", specifier = ">=1.10,<2" },
+    { name = "dbt-adapters", specifier = ">=1.24.5,<2" },
+    { name = "dbt-core", specifier = ">=1.12,<2" },
+    { name = "mashumaro", specifier = ">=3.17" },
     { name = "opentelemetry-api", specifier = ">=1.45.2" },
     { name = "pyarrow", specifier = ">=26,<27" },
     { name = "sqlparse", specifier = ">=0.5,<1" },
@@ -996,7 +998,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "dbt-core", specifier = ">=1.10.8,<2" },
+    { name = "dbt-core", specifier = ">=1.12,<2" },
     { name = "dbt-redis-adbc", editable = "adapter" },
 ]
 

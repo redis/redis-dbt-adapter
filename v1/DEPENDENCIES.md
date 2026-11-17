@@ -22,7 +22,11 @@ Python 3.10 and requires NumPy 2.x and pandas 2.2.2+ for their optional
 integrations. The example's development dependencies now require pandas 3 and pytest 9,
 matching their current major versions. The Arrow-only native v2 runtime still needs only PyArrow and the
 ADBC driver manager. The oldest-dependency CI lane now uses PyArrow 26.0.0,
-while retaining the existing dbt Core, dbt adapter, and ADBC manager floors.
+with dbt Core 1.12.0, dbt-adapters 1.24.5, Mashumaro 3.17, and ADBC manager 1.6.0.
+Python 3.14 requires the newer dbt floors: older dbt versions cap Mashumaro
+below 3.15, which fails during import on Python 3.14. The adapter explicitly
+requires Mashumaro 3.17 or later so dependency resolution cannot select an
+incompatible older version.
 
 [Polars 2](https://docs.pola.rs/releases/upgrade/2/) changes lazy collection to
 use the streaming engine by default. The adapter retains normal Polars

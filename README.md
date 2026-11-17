@@ -18,7 +18,7 @@ dbt --version
 Then follow the [installation guide](docs/INSTALLATION.md) to install the separate
 native Redis ADBC driver, configure your Redis TLS connection and dbt profile,
 and run a first model. You need Redis 8.x with Query Engine (Search) enabled.
-The published Python package supports dbt Core 1.10 and later 1.x releases.
+The published Python package supports dbt Core 1.12 and later 1.x releases.
 
 ## Repository guides
 
@@ -34,7 +34,7 @@ for progress toward that goal.
 
 | Directory | Purpose | Status |
 | --- | --- | --- |
-| [`v1/`](v1/README.md) | Python `dbt-redis-adbc` adapter, NYC taxi example, driver tooling, and functional tests | Supports dbt Core 1.10 and later 1.x releases; the example requires 1.10.8+ |
+| [`v1/`](v1/README.md) | Python `dbt-redis-adbc` adapter, NYC taxi example, driver tooling, and functional tests | Supports dbt Core 1.12 and later 1.x releases; the example requires 1.12+ |
 | [`v2/`](v2/README.md) | Native v2 fixtures, taxi validation, and tooling | Experimental fork: smoke and v1 feature scenarios pass on macOS and Linux; requires a custom engine |
 
 See [integration status and remaining work](docs/integration-status.md) for

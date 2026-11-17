@@ -117,7 +117,8 @@ jobs:
       - name: Install the oldest versions
         if: matrix.versions == 'oldest'
         run: |
-          uv pip install dbt-core==1.10.8 dbt-adapters==1.16.0 adbc-driver-manager==1.6.0 pyarrow==26.0.0
+          uv pip install dbt-core==1.12.0 dbt-adapters==1.24.5 mashumaro==3.17 adbc-driver-manager==1.6.0 pyarrow==26.0.0
+          uv run --no-sync python -c "from dbt.cli.main import dbtRunner; from dbt.adapters.redis_adbc import Plugin"
           # Otherwise `uv run` syncs back to uv.lock.
           echo UV_NO_SYNC=1 >> "$GITHUB_ENV"
 

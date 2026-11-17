@@ -2,7 +2,7 @@
 
 A dbt Core adapter for Redis 8.x, built on the
 [Redis ADBC driver](https://github.com/redis/redis-adbc-driver).
-Compatible with dbt Core 1.10 and later 1.x releases.
+Compatible with dbt Core 1.12 and later 1.x releases.
 
 This community-origin adapter supports direct Redis ADBC and a separate v1
 Flight SQL transport. See the [integration status and evidence](../../docs/integration-status.md)

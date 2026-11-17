@@ -4,7 +4,7 @@ This guide installs the published Python adapter, configures a Redis connection,
 and builds a first model. The commands use the tested combination of
 **dbt-redis-adbc 0.2.0**, **Redis ADBC driver 0.0.18**, and **Python 3.14**.
 
-The adapter supports dbt Core 1.10 and later 1.x releases. The experimental
+The adapter supports dbt Core 1.12 and later 1.x releases. The experimental
 native dbt v2 adapter has its own [engine build and setup guide](../v2/README.md#engine-implementation).
 
 ## 1. Check requirements

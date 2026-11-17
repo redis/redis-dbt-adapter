@@ -218,8 +218,7 @@ against isolated databases, including each taxi dependency matrix entry. CI runs
 
 [`scripts/ci_check.py`](scripts/ci_check.py) does the checks. It runs on
 Python 3.14 with the locked versions and with the oldest ones
-the `pyproject.toml` files allow: dbt-core 1.10.8 (the first 1.10 release
-that accepts the `arguments:` the tests are written with), dbt-adapters 1.16,
+the `pyproject.toml` files allow: dbt-core 1.12.0, dbt-adapters 1.24.5, Mashumaro 3.17,
 adbc-driver-manager 1.6 and pyarrow 26. Each run takes 3–5 minutes.
 
 CI also runs [dbt's adapter test suite](#dbts-adapter-test-suite) on Python

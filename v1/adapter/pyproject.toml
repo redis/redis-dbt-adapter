@@ -17,8 +17,10 @@ classifiers = [
 ]
 requires-python = ">=3.14"
 dependencies = [
-    "dbt-core>=1.10,<2",
-    "dbt-adapters>=1.16,<2",
+    "dbt-core>=1.12,<2",
+    "dbt-adapters>=1.24.5,<2",
+    # Python 3.14 support requires Mashumaro 3.17 or later.
+    "mashumaro>=3.17",
     # Security floor for dbt's trace-context parsing (CVE-2026-126360).
     "opentelemetry-api>=1.45.2",
     "adbc-driver-manager>=1.6,<2",
