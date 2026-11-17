@@ -34,7 +34,7 @@ python3 scripts/redis_enterprise.py verify
 bash v1/scripts/download_driver.sh
 ```
 
-Docker, OpenSSL, Python 3.13+, the GitHub CLI and the engine's build tools are
+Docker, OpenSSL, Python 3.14+, the GitHub CLI and the engine's build tools are
 required. The native driver downloader uses latest stable by default. To test
 latest source instead, build the resolved driver revision explicitly and set
 `REDIS_ADBC_DRIVER` to that absolute library path; retain the actual source SHA.
@@ -101,7 +101,7 @@ In the review terminal, retain the same backend configuration and export the
 separate client hop:
 
 ```sh
-python3.13 -m venv .venv-flight
+python3.14 -m venv .venv-flight
 .venv-flight/bin/python -m pip install -r v2/requirements-flight.txt
 export PATH="$PWD/.venv-flight/bin:$PATH"
 export FLIGHT_SQL_URI=grpc+tls://127.0.0.1:18841

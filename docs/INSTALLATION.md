@@ -2,14 +2,14 @@
 
 This guide installs the published Python adapter, configures a Redis connection,
 and builds a first model. The commands use the tested combination of
-**dbt-redis-adbc 0.2.0**, **Redis ADBC driver 0.0.18**, and **Python 3.13**.
+**dbt-redis-adbc 0.2.0**, **Redis ADBC driver 0.0.18**, and **Python 3.14**.
 
-The adapter supports dbt Core 1.10 and later 1.x releases. The experimental
+The adapter supports dbt Core 1.12 and later 1.x releases. The experimental
 native dbt v2 adapter has its own [engine build and setup guide](../v2/README.md#engine-implementation).
 
 ## 1. Check requirements
 
-- Python 3.13, with `venv` and `pip`.
+- Python 3.14, with `venv` and `pip`.
 - macOS Apple Silicon, Linux x86-64, or Linux arm64 for the prebuilt native driver.
 - A Redis 8.x RAM database with Query Engine (Search) enabled, reachable from
   this machine. Redis Flex is unsupported. See the driver's
@@ -28,7 +28,7 @@ local Enterprise test database with generated credentials and a private CA, use
 In a directory where you want to keep your dbt environment:
 
 ```sh
-python3.13 -m venv .venv
+python3.14 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install dbt-redis-adbc==0.3.2

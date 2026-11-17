@@ -9,7 +9,7 @@ results below retain their original versions.
 
 | Path | Status | Installation and scope |
 | --- | --- | --- |
-| dbt Core 1.x → Redis ADBC | ✅ 🔌 Available through community-origin `dbt-redis-adbc` | [Python adapter](../v1/adapter/README.md), `dbt-core>=1.10,<2`; the example requires `>=1.10.8,<2`. Install the native Redis driver separately. |
+| dbt Core 1.x → Redis ADBC | ✅ 🔌 Available through community-origin `dbt-redis-adbc` | [Python adapter](../v1/adapter/README.md), `dbt-core>=1.12,<2`; the example requires `>=1.12,<2`. Install the native Redis driver separately. |
 | dbt v2 → Redis ADBC | Experimental, validated in a custom engine | Build the [Redis-enabled Rust fork](../v2/README.md#engine-implementation) at the pinned commit. Installing the Python adapter or just the driver does not register Redis in stock dbt v2. |
 | dbt Core 1.x → ADBC Flight SQL → Redis Flight SQL server | Implemented, with scoped local validation | Use the [v1 Flight SQL transport](../v1/adapter/README.md#flight-sql) and a separately deployed server. Verified TLS/authentication and 192 functional passes on the recorded macOS source build; [qualification and limits](validation/issue40-2026-11-16.md). Native v2 Flight SQL is unsupported ([#51](https://github.com/redis/redis-dbt-adapter/issues/51)). |
 
@@ -36,7 +36,7 @@ connector and describe the current Redis-hosted repository separately from
 maintenance or support. Suggested summary:
 
 > Redis ADBC integration is available through `dbt-redis-adbc` for dbt Core
-> 1.10–1.x. The companion project documents end-to-end workflows and functional
+> 1.12–1.x. The companion project documents end-to-end workflows and functional
 > tests. Experimental dbt v2 support requires a custom Rust engine. The v1 Flight
 > SQL transport passed scoped authenticated TLS qualification. Native v2 Flight
 > SQL remains unsupported.
@@ -45,7 +45,7 @@ maintenance or support. Suggested summary:
 
 | Evidence | Exact version scope | What it establishes |
 | --- | --- | --- |
-| [v1 project and functional-suite configuration](../.github/workflows/ci.yml), [testing guide](../v1/README.md#validation-and-testing) | Dedicated Redis Enterprise TLS/auth environment; latest published driver selected at runtime; Python 3.13. Locked: Core 1.12.6, dbt-adapters 1.24.5, dbt-tests-adapter 1.20.0, ADBC manager 1.12.0, PyArrow 26.0.0. Oldest project lane: Core 1.10.8, dbt-adapters 1.16.0, manager 1.6.0, PyArrow 26.0.0. | Configured project builds, seeds, incremental/snapshot/microbatch demos, tests, docs, and empty builds. The adapter functional suite runs on locked versions only. Workflow definitions and dependency pins describe coverage; they do not prove a particular run passed. |
+| [v1 project and functional-suite configuration](../.github/workflows/ci.yml), [testing guide](../v1/README.md#validation-and-testing) | Dedicated Redis Enterprise TLS/auth environment; latest published driver selected at runtime; Python 3.14. Locked: Core 1.12.6, dbt-adapters 1.24.5, dbt-tests-adapter 1.20.0, ADBC manager 1.12.0, PyArrow 26.0.0. Oldest project lane: Core 1.12.0, dbt-adapters 1.24.5, Mashumaro 3.17, manager 1.6.0, PyArrow 26.0.0. | Configured project builds, seeds, incremental/snapshot/microbatch demos, tests, docs, and empty builds. The adapter functional suite runs on locked versions only. Workflow definitions and dependency pins describe coverage; they do not prove a particular run passed. |
 | [Historical native v2 Linux CI](https://github.com/alberttwong/redis-dbt-adapter-with-project/actions/runs/39623533131), October 21, 2026; [validation record](../v2/VALIDATION.md) | dbt-oss 2.0.8, engine `90178580bd6f3353d758fff770fdc2c58c985ad0`, Redis 8.6.2, Redis ADBC v0.0.16; earlier PyArrow 25 runtime | Recorded smoke and parity builds, taxi workflow, trusted TLS and credential precedence, and cleanup. Taxi build: 82 successes and one configured warning; empty build: 82 successes. |
 | [Recorded native v2 macOS arm64 revalidation](../v2/VALIDATION.md), October 22, 2026 | Same engine, dbt, Redis, and driver as above; Python 3.13.16, PyArrow 26.0.0, ADBC manager 1.12.0 | Recorded Python runtime tests, parity and taxi runners, demos, empty builds, and cleanup without the v1 adapter installed. |
 

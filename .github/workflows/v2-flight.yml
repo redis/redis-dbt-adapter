@@ -57,10 +57,10 @@ jobs:
           cache-dependency-path: flight/go.sum
       - uses: astral-sh/setup-uv@v10.2.0
         with:
-          python-version: "3.13"
+          python-version: "3.14"
       - name: Install the separate Flight client and Arrow runtime
         run: |
-          uv venv .venv-flight --python 3.13
+          uv venv .venv-flight --python 3.14
           uv pip install --python .venv-flight/bin/python -r v2/requirements-flight.txt
           echo "$GITHUB_WORKSPACE/.venv-flight/bin" >> "$GITHUB_PATH"
       - name: Install engine build tools

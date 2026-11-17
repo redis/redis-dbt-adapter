@@ -34,7 +34,7 @@ jobs:
     timeout-minutes: 5
     strategy:
       matrix:
-        python: ["3.13"]
+        python: ["3.14"]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -63,16 +63,16 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@v10.2.0
         with:
-          python-version: "3.13"
+          python-version: "3.14"
       - name: Test the v2 smoke runner without v1 dependencies
         run: |
-          uv run --no-project --python 3.13 python -m unittest discover -s v2/tests -v
+          uv run --no-project --python 3.14 python -m unittest discover -s v2/tests -v
           if [ -d scripts/tests ]; then
-            uv run --no-project --python 3.13 python -m unittest discover -s scripts/tests -v
+            uv run --no-project --python 3.14 python -m unittest discover -s scripts/tests -v
           fi
 
       - name: Test the microbatch failure boundary and recovery checks
-        run: uv run --no-project --python 3.13 python -m unittest discover -s v1/scripts/tests -v
+        run: uv run --no-project --python 3.14 python -m unittest discover -s v1/scripts/tests -v
 
   project:
     name: project (Python ${{ matrix.python }}, ${{ matrix.versions }} dbt)
@@ -88,7 +88,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.13"]
+        python: ["3.14"]
         # locked: uv.lock. oldest: the lowest versions the pyproject.toml
         # files allow (the project's dbt-core, the adapter's other floors).
         versions: [locked, oldest]
@@ -117,7 +117,8 @@ jobs:
       - name: Install the oldest versions
         if: matrix.versions == 'oldest'
         run: |
-          uv pip install dbt-core==1.10.8 dbt-adapters==1.16.0 adbc-driver-manager==1.6.0 pyarrow==26.0.0
+          uv pip install dbt-core==1.12.0 dbt-adapters==1.24.5 mashumaro==3.17 adbc-driver-manager==1.6.0 pyarrow==26.0.0
+          uv run --no-sync python -c "from dbt.cli.main import dbtRunner; from dbt.adapters.redis_adbc import Plugin"
           # Otherwise `uv run` syncs back to uv.lock.
           echo UV_NO_SYNC=1 >> "$GITHUB_ENV"
 
@@ -216,7 +217,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.13"]
+        python: ["3.14"]
     steps:
       - uses: actions/checkout@v7
         with:

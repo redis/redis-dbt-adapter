@@ -45,7 +45,7 @@ jobs:
           cache-dependency-path: flight/go.sum
       - uses: astral-sh/setup-uv@v10.2.0
         with:
-          python-version: "3.13"
+          python-version: "3.14"
       - name: Build Flight and record the resolved Redis driver
         env:
           GH_TOKEN: ${{ github.token }}

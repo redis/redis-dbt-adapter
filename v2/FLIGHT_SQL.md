@@ -51,7 +51,7 @@ Historical qualification receipts remain unchanged.
 Install the separate Apache ADBC Flight client library:
 
 ```sh
-python3.13 -m venv .venv-flight
+python3.14 -m venv .venv-flight
 .venv-flight/bin/python -m pip install -r v2/requirements-flight.txt
 export PATH="$PWD/.venv-flight/bin:$PATH"
 export FLIGHT_SQL_DRIVER="$(python -c 'import adbc_driver_flightsql; print(adbc_driver_flightsql._driver_path())')"
