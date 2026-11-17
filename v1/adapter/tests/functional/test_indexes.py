@@ -115,6 +115,8 @@ class TestIndexes:
 class TestIndexesRenameRekey(TestIndexes):
     @pytest.fixture(scope="class")
     def dbt_profile_target(self, dbt_profile_target):
+        if dbt_profile_target.get("transport") == "flightsql":
+            pytest.skip("rename_rekey is configured on the Flight server, not in client profiles")
         return dict(dbt_profile_target, rename_rekey=True)
 
 
