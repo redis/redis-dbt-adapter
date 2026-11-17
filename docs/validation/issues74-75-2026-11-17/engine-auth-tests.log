@@ -1,0 +1,23 @@
+warning: patch `arrow-flight v58.4.0 (https://github.com/sdf-labs/arrow-rs?rev=4419807fa617c6f4d9c7ab5d86c9ae94c4b9b854#4419807f)` was not used in the crate graph
+help: Check that the patched package version and available features are compatible
+      with the dependency requirements. If the patch has a different version from
+      what is locked in the Cargo.lock file, run `cargo update` to use the new
+      version. This may also occur with an optional dependency that is not enabled.
+warning: profile package spec `sdf-frontend` in profile `dev` did not match any packages
+    Finished `test` profile [unoptimized] target(s) in 1.24s
+     Running unittests src/lib.rs (/private/tmp/redis-dbt-issue40-engine/target/debug/deps/dbt_auth-2ae7df2212293eb0)
+
+running 10 tests
+test redis_adbc::tests::live_driver_query ... ignored, requires REDIS_ADBC_DRIVER and a test Redis at REDIS_URI
+test redis_adbc::tests::invalid_configuration_does_not_echo_credentials ... ok
+test redis_adbc::tests::null_credentials_preserve_uri_credentials ... ok
+test redis_adbc::tests::empty_profile_credentials_preserve_uri_credentials ... ok
+test redis_adbc::tests::flight_rejects_insecure_uris_and_server_or_secret_options ... ok
+test redis_adbc::tests::v1_options_preserve_scalar_shapes_and_block_credential_overrides ... ok
+test redis_adbc::tests::scalar_password_is_coerced_at_the_builder_boundary ... ok
+test redis_adbc::tests::defaults_and_borrowed_options ... ok
+test redis_adbc::tests::flight_maps_only_client_options_and_keeps_secrets_out_of_debug ... ok
+test redis_adbc::tests::explicit_credentials_override_uri_without_being_logged ... ok
+
+test result: ok. 9 passed; 0 failed; 1 ignored; 0 measured; 353 filtered out; finished in 0.01s
+

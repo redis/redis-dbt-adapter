@@ -1,0 +1,8 @@
+----------------------------------------------------------------------
+Ran 14 tests in 0.015s
+
+OK
+Verified dbt-redis-adbc 0.2.0: wheel, sdist, and SHA-256 checksums
+Verified installed release wheel: dbt_redis_adbc-0.2.0-py3-none-any.whl (/var/folders/gv/3m3bj31563lb0qds5jsqm8sw0000gp/T/tmp_t_yfc4i/site-packages/dbt/adapters/redis_adbc/__init__.py)
+Verified PyPI version 0.2.0 and both distribution checksums
+Verified tagged source version 0.2.0

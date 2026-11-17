@@ -1,0 +1,9 @@
+Waiting for dedicated Enterprise cluster...
+Verified Enterprise: 3 shards, QPF 4x, Search, trusted TLS, named-user auth, write/read/delete.
+Verified rejection of plaintext, untrusted CA, missing auth, and incorrect password.
+Connection environment: source /Users/albert.wong/.codex/worktrees/d711/redis-dbt-adapter/.redis-enterprise/issues74-75/env.sh
+Reusing verified fixture without resetting certificate verification:
+Waiting for dedicated Enterprise cluster...
+Verified Enterprise: 3 shards, QPF 4x, Search, trusted TLS, named-user auth, write/read/delete.
+Verified rejection of plaintext, untrusted CA, missing auth, and incorrect password.
+Connection environment: source /Users/albert.wong/.codex/worktrees/d711/redis-dbt-adapter/.redis-enterprise/issues74-75/env.sh
