@@ -26,9 +26,11 @@ cargo build -p dbt-sa-cli
 The patch contains the Rust profile, authentication, driver selection, connection
 session handling, exact type supplementation, bounded refusal retry handling,
 optional local runtime changes, tests and a generated changelog. It adds no Rust
-dependencies and does not change engine macros. It has not been committed or
-merged into the engine fork. Its auth input changes require human verification
-before committing, under that checkout's `crates/dbt-auth/AGENTS.md`.
+dependencies and does not change engine macros. The actual engine source is submitted in
+[draft engine PR #4](https://github.com/alberttwong/dbt/pull/4) at
+`667707f32b746359d74affa477144418ed2a0179`, stacked on the pinned Redis
+branch. It is not merged. Human auth verification remains outstanding under
+that checkout's `crates/dbt-auth/AGENTS.md`; no human verification is claimed.
 
 Install the separate Apache ADBC Flight client library:
 
