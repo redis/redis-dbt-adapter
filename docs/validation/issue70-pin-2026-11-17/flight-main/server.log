@@ -1,0 +1,4 @@
+time=2026-11-17T08:25:58.327-08:00 level=WARN msg="no token secret is set: tokens are valid only until this server restarts, and other servers won't accept them"
+time=2026-11-17T08:25:58.328-08:00 level=INFO msg="serving Arrow Flight" addr=127.0.0.1:51393 redis=rediss://127.0.0.1:51392/0 auth=redis-acl tls=true sessions=true
+time=2026-11-17T08:27:26.886-08:00 level=INFO msg="shutting down" signal=terminated timeout=25s
+time=2026-11-17T08:27:27.361-08:00 level=INFO msg="shut down"

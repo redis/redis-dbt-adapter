@@ -70,14 +70,14 @@ Native macOS arm64 and Linux CI validation passed with dbt-oss 2.0.8, Redis 8.6.
 ADBC v0.0.16. The original smoke, expanded parity fixture, and complete sampled
 NYC taxi project pass, including Python, CSV loading, contracts, persisted docs,
 merge, snapshots, microbatch, and empty builds with unit-test fixtures.
-See [VALIDATION.md](VALIDATION.md) for evidence and limitations. The pinned engine
-is merged in [engine PR #3](https://github.com/alberttwong/dbt/pull/3).
+See [VALIDATION.md](VALIDATION.md) for evidence and limitations. That milestone
+was merged in [engine PR #3](https://github.com/alberttwong/dbt/pull/3).
 Linux parity and trusted TLS passed in the [manual workflow](https://github.com/alberttwong/redis-dbt-adapter-with-project/actions/runs/39623533131).
 
 ## Current contribution and API audit
 
 [Upstream PR #17195](https://github.com/dbt-labs/dbt/pull/17195) contains the
-reconciled candidate pinned by `upstream.json`. The
+reconciled direct-Redis base of the candidate pinned by `upstream.json`. The
 [November 16 record](../docs/validation/issue40-2026-11-16.md) documents a live
 Rust ADBC 1.1 API/concurrency audit, current-driver smoke/parity, and full sampled
 taxi validation. Driver v0.0.27 exposed refused-publication and Decimal256 gaps;
@@ -90,7 +90,8 @@ native v2 Flight SQL transport in [#51](https://github.com/redis/redis-dbt-adapt
 
 The [reviewable Flight engine patch](engine/flight-sql.patch),
 [setup guide](FLIGHT_SQL.md), and [qualification receipt](../docs/validation/issue51-2026-11-16.md)
-now implement and test that candidate separately. It remains unmerged;
-local stable/source qualification passes after the upstream Flight session fix,
-with remaining follow-up work tracked in
-[#70](https://github.com/redis/redis-dbt-adapter/issues/70).
+document the Flight implementation now merged in
+[engine PR #4](https://github.com/alberttwong/dbt/pull/4) and selected by the
+integration pin. The [new qualification record](../docs/validation/issues70-71-2026-11-16.md)
+retains macOS and Linux passes, deterministic refusal probes and same-session
+cancellation evidence. Remaining support limits stay tracked in #51.

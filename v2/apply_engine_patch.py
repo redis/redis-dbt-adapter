@@ -1,19 +1,30 @@
 #!/usr/bin/env python3
-"""Apply the reviewable Flight implementation to the pinned external dbt engine."""
+"""Verify the merged Flight engine, or reproduce the historical patch build."""
 import argparse
 import json
 from pathlib import Path
 import subprocess
 
 
+ROOT = Path(__file__).resolve().parent
+
+
 def apply(engine):
-    root = Path(__file__).resolve().parent
-    base = json.loads((root / "upstream.json").read_text())["implementation_commit"]
+    sources = json.loads((ROOT / "upstream.json").read_text())
+    pinned = sources["implementation_commit"]
+    base = sources["flight_patch_base_commit"]
     head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=engine, text=True).strip()
-    if head != base:
-        raise ValueError("Engine HEAD must match v2/upstream.json before applying the Flight patch")
-    patch = root / "engine" / "flight-sql.patch"
+    if head not in (pinned, base):
+        raise ValueError("Engine HEAD must match the pinned merged engine or historical Flight patch base")
+    patch = ROOT / "engine" / "flight-sql.patch"
     command = ["git", "apply", "--whitespace=error", str(patch)]
+    if head == pinned:
+        if subprocess.check_output(["git", "diff", "HEAD", "--name-only"], cwd=engine):
+            raise ValueError("Use a clean pinned engine checkout; tracked changes obscure its identity")
+        subprocess.run(["git", "apply", "--reverse", "--check", str(patch)],
+                       cwd=engine, check=True, capture_output=True)
+        print("Pinned merged engine already contains Flight SQL; no patch applied.")
+        return
     if subprocess.run(["git", "apply", "--reverse", "--check", str(patch)],
                       cwd=engine, capture_output=True).returncode == 0:
         print("Flight engine patch is already applied.")

@@ -1,10 +1,11 @@
 # Native v2 Flight SQL candidate
 
 This is an experimental implementation for [#51](https://github.com/redis/redis-dbt-adapter/issues/51),
-supplied as a reviewable [engine patch](engine/flight-sql.patch) against the
-native engine commit in [upstream.json](upstream.json). The default engine pin
-still supports direct Redis only. **Native v2 Flight support is not advertised:**
-engine human review and the remaining qualification scope are still pending.
+included in the merged engine commit pinned by [upstream.json](upstream.json).
+Both direct Redis and Flight SQL are compiled into that engine; no patch is
+needed for a fresh checkout. The historical [engine patch](engine/flight-sql.patch)
+is retained to reproduce earlier evidence. Broader native v2 Flight support
+qualification remains in #51.
 After [Flight PR #75](https://github.com/redis/redis-apache-arrow-flight/pull/75)
 resolved the session reset in #74, full local qualification passes with both
 latest driver main and latest stable v0.0.27. The
@@ -14,12 +15,11 @@ original failure and the subsequent passing runs separately.
 ## Build and install
 
 Read the engine checkout's `AGENTS.md`, `.agents/adapters.md` and contributing
-instructions. From this integration repository, apply the patch to a clean
-engine checkout at `754f0a47164f86226dc568096ac56906ff9d2e69`:
+instructions. Check out the merged pin in a clean engine repository, then build:
 
 ```sh
-python3 v2/apply_engine_patch.py --engine /path/to/dbt-engine
 cd /path/to/dbt-engine
+git checkout 3f285a37312c6ccab44a16b71d831c49e35417bd
 cargo build -p dbt-sa-cli
 ```
 
@@ -30,8 +30,11 @@ dependencies and does not change engine macros. The actual engine source was sub
 [engine PR #4](https://github.com/alberttwong/dbt/pull/4) at
 `667707f32b746359d74affa477144418ed2a0179`, stacked on the pinned Redis
 branch, and merged as `3f285a37312c6ccab44a16b71d831c49e35417bd`.
-The global integration pin remains unchanged. This record does not establish
-the separately required human auth verification.
+The global integration pin now selects that merged commit. Its entire Git tree
+is identical to the qualified source commit `667707f32b746359d74affa477144418ed2a0179`.
+`apply_engine_patch.py` verifies the clean merged checkout without modifying it;
+it still supports the historical patch base recorded in `upstream.json` for
+reproduction. Automated validation does not establish human auth verification.
 
 Install the separate Apache ADBC Flight client library:
 
@@ -177,8 +180,10 @@ CLI interruption, nor measure all server memory, Search cursors, or file handles
 - Deterministic native Flight refusal and same-session protocol cancellation
   probes now pass on macOS and Linux with latest driver main; see the
   [new evidence](../docs/validation/issues70-71-2026-11-16.md).
-  Broader native cancellation/resource coverage and the human
-  auth verification record remain tracked in
-  [project #70](https://github.com/redis/redis-dbt-adapter/issues/70).
-  The reproduced optional-runtime failure and candidate fix are tracked in
+  Broader native cancellation/resource coverage remains part of
+  [#51](https://github.com/redis/redis-dbt-adapter/issues/51). The missing public
+  auth live-test instructions are tracked in
+  [#74](https://github.com/redis/redis-dbt-adapter/issues/74); automated probes
+  do not establish that a human ran a live-test suite. The reproduced
+  optional-runtime failure and merged fix are recorded in closed
   [#71](https://github.com/redis/redis-dbt-adapter/issues/71).

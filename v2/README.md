@@ -1,10 +1,11 @@
 # Redis adapter integration for dbt v2
 
-An unmerged [native Flight SQL candidate](FLIGHT_SQL.md) and
-[local qualification record](../docs/validation/issue51-2026-11-16.md) are available
-for #51. Local qualification passes with current driver source and stable
-v0.0.27 after the upstream Flight session fix. The default engine pin remains
-direct-Redis only; engine review and Linux qualification are pending.
+The pinned engine includes the merged [native Flight SQL implementation](FLIGHT_SQL.md).
+[macOS and Linux qualification](../docs/validation/issues70-71-2026-11-16.md)
+passes with latest driver main, including deterministic refused-publication and
+same-session cancellation probes; the independent stable/main Linux comparison
+also passes. Redis and Flight remain experimental in the custom engine. The
+broader support qualification stays tracked in #51.
 
 **Adapter source:** [`alberttwong/dbt`](https://github.com/alberttwong/dbt).
 The Redis adapter is compiled into that Rust engine. This `v2/` directory
@@ -37,12 +38,14 @@ merged in [engine PR #1](https://github.com/alberttwong/dbt/pull/1); native prof
 metadata, and SQL execution support is in
 [engine PR #2](https://github.com/alberttwong/dbt/pull/2). Broader v1 feature
 coverage is in [engine PR #3](https://github.com/alberttwong/dbt/pull/3).
+The current pin adds Flight SQL through merged
+[engine PR #4](https://github.com/alberttwong/dbt/pull/4).
 
 ```sh
 git clone https://github.com/alberttwong/dbt.git redis-dbt-engine
 cd redis-dbt-engine
 git remote add upstream https://github.com/dbt-labs/dbt.git
-git checkout 754f0a47164f86226dc568096ac56906ff9d2e69
+git checkout 3f285a37312c6ccab44a16b71d831c49e35417bd
 # Requires the checkout's Rust toolchain, a C/C++ toolchain, and protoc.
 cargo build -p dbt-sa-cli
 # Executable: target/debug/dbt
@@ -123,8 +126,10 @@ native workflow builds the pinned engine and can run the smoke, feature-parity,
 TLS, and full taxi suites. [Linux verification passed on October 21, 2026](https://github.com/alberttwong/redis-dbt-adapter-with-project/actions/runs/39623533131).
 Redis stays experimental and static analysis is disabled.
 
-The current candidate is pinned on engine branch `codex/redis-adbc-upstream`
-and submitted as [upstream PR #17195](https://github.com/dbt-labs/dbt/pull/17195).
+The current candidate is pinned on engine branch `codex/redis-adbc-upstream`.
+Its direct-Redis base is submitted as
+[upstream PR #17195](https://github.com/dbt-labs/dbt/pull/17195); the additional
+Flight implementation is merged in the engine fork's PR #4.
 The earlier feature-parity milestone was merged in engine PR #3. The current
 [API audit and qualification](../docs/validation/issue40-2026-11-16.md) retain
 source-specific results; upstream review and CI approval remain separate.

@@ -1,0 +1,23 @@
+warning: patch `arrow-flight v58.4.0 (https://github.com/sdf-labs/arrow-rs?rev=4419807fa617c6f4d9c7ab5d86c9ae94c4b9b854#4419807f)` was not used in the crate graph
+help: Check that the patched package version and available features are compatible
+      with the dependency requirements. If the patch has a different version from
+      what is locked in the Cargo.lock file, run `cargo update` to use the new
+      version. This may also occur with an optional dependency that is not enabled.
+warning: profile package spec `sdf-frontend` in profile `dev` did not match any packages
+warning: unnecessary qualification
+    --> crates/dbt-adapter/src/adapter/adapter_impl.rs:2269:17
+     |
+2269 |                 crate::metadata::redis::supplement_schema(
+     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: requested on the command line with `-W unused-qualifications`
+help: remove the unnecessary path segments
+     |
+2269 -                 crate::metadata::redis::supplement_schema(
+2269 +                 metadata::redis::supplement_schema(
+     |
+
+warning: `dbt-adapter` (lib) generated 1 warning (run `cargo fix --lib -p dbt-adapter` to apply 1 suggestion)
+   Compiling dbt-main v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-main)
+   Compiling dbt-sa-cli v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-sa-cli)
+    Finished `dev` profile [unoptimized] target(s) in 9.34s
