@@ -1,0 +1,33 @@
+test_ci_flag_requires_github_environment_before_provisioning (test_enterprise_env.EnterpriseEnvironmentTests.test_ci_flag_requires_github_environment_before_provisioning) ... ok
+test_ci_handoff_masks_password_and_exports_explicit_ca_without_global_trust_override (test_enterprise_env.EnterpriseEnvironmentTests.test_ci_handoff_masks_password_and_exports_explicit_ca_without_global_trust_override) ... ok
+test_rejects_multiline_values_before_writing_or_logging (test_enterprise_env.EnterpriseEnvironmentTests.test_rejects_multiline_values_before_writing_or_logging) ... ok
+test_does_not_retry_auth_errors_or_ambiguous_writes (test_enterprise_env.EnterpriseStartupTests.test_does_not_retry_auth_errors_or_ambiguous_writes) ... ok
+test_retries_unavailable_bootstrap_and_rejected_database_creation (test_enterprise_env.EnterpriseStartupTests.test_retries_unavailable_bootstrap_and_rejected_database_creation) ... ok
+test_rejects_missing_configuration_plaintext_and_uri_credentials (test_flight.FlightProfileTests.test_rejects_missing_configuration_plaintext_and_uri_credentials) ... ok
+test_uses_separate_client_profile_and_never_copies_secrets (test_flight.FlightProfileTests.test_uses_separate_client_profile_and_never_copies_secrets) ... ok
+test_accepts_verified_tls_and_separate_credentials (test_integration_config.IntegrationConfigTests.test_accepts_verified_tls_and_separate_credentials) ... ok
+test_diagnostics_do_not_expose_uri_or_credentials (test_integration_config.IntegrationConfigTests.test_diagnostics_do_not_expose_uri_or_credentials) ... ok
+test_live_runners_reject_missing_config_before_subprocess_or_file_work (test_integration_config.IntegrationConfigTests.test_live_runners_reject_missing_config_before_subprocess_or_file_work) ... ok
+test_rejects_plaintext_bad_endpoints_and_certificate_bypasses (test_integration_config.IntegrationConfigTests.test_rejects_plaintext_bad_endpoints_and_certificate_bypasses) ... ok
+test_requires_each_connection_setting (test_integration_config.IntegrationConfigTests.test_requires_each_connection_setting) ... ok
+test_accepts_v2_distributions (test_smoke.ResultTests.test_accepts_v2_distributions) ... ok
+test_cannot_silently_omit_generic_tests (test_smoke.ResultTests.test_cannot_silently_omit_generic_tests) ... ok
+test_only_ephemeral_model_can_be_a_no_op (test_smoke.ResultTests.test_only_ephemeral_model_can_be_a_no_op) ... ok
+test_rejects_core_v1 (test_smoke.ResultTests.test_rejects_core_v1) ... ok
+test_requires_all_fixture_results_and_success_statuses (test_smoke.ResultTests.test_requires_all_fixture_results_and_success_statuses) ... ok
+test_build_twice_in_isolated_schema_then_cleanup (test_smoke.RunnerTests.test_build_twice_in_isolated_schema_then_cleanup) ... ok
+test_cleanup_failure_is_not_success (test_smoke.RunnerTests.test_cleanup_failure_is_not_success) ... ok
+test_parse_does_not_build_or_clean_up (test_smoke.RunnerTests.test_parse_does_not_build_or_clean_up) ... ok
+test_second_build_cannot_reuse_stale_results (test_smoke.RunnerTests.test_second_build_cannot_reuse_stale_results) ... ok
+test_unsupported_adapter_failure_does_not_touch_database (test_smoke.RunnerTests.test_unsupported_adapter_failure_does_not_touch_database) ... ok
+test_all_failure_statuses_fail (test_taxi.TaxiResultTests.test_all_failure_statuses_fail) ... ok
+test_missing_executable_results_fail (test_taxi.TaxiResultTests.test_missing_executable_results_fail) ... ok
+test_only_ephemeral_models_may_be_skipped (test_taxi.TaxiResultTests.test_only_ephemeral_models_may_be_skipped) ... Verified taxi build results: 1
+ok
+test_uppercase_warn_is_only_accepted_for_explicit_warning_tests (test_taxi.TaxiResultTests.test_uppercase_warn_is_only_accepted_for_explicit_warning_tests) ... Verified taxi build results: 1
+ok
+
+----------------------------------------------------------------------
+Ran 26 tests in 0.075s
+
+OK

@@ -1,5 +1,9 @@
 # Native Redis v2 validation
 
+The separate [Flight SQL candidate qualification](../docs/validation/issue51-2026-11-16.md)
+records current-source local passes and a stable-release session-isolation
+failure. It does not change the native engine pin or establish v2 Flight support.
+
 ## Current upstream candidate: November 16, 2026
 
 The current [upstream.json](upstream.json) pins engine

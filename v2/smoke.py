@@ -67,7 +67,33 @@ def check_results(path):
         raise SmokeError(f"Incomplete build: missing={sorted(missing)}, unsuccessful={failed}")
 
 
-def run_smoke(binary, *, build=False):
+def configure_transport(project, env, transport):
+    if transport == "redis":
+        return
+    if transport != "flightsql":
+        raise SmokeError("Unknown Redis transport")
+    from urllib.parse import urlsplit
+    required = ("FLIGHT_SQL_DRIVER", "FLIGHT_SQL_URI", "FLIGHT_SQL_USERNAME",
+                "FLIGHT_SQL_PASSWORD", "FLIGHT_SQL_TLS_CA_FILE")
+    if any(not env.get(key, "").strip() for key in required):
+        raise SmokeError("Flight qualification requires " + ", ".join(required))
+    try:
+        uri = urlsplit(env["FLIGHT_SQL_URI"])
+        valid = (uri.scheme == "grpc+tls" and uri.hostname and uri.port
+                 and not uri.username and not uri.password and not uri.query
+                 and not uri.fragment and uri.path in ("", "/"))
+    except ValueError:
+        valid = False
+    if not valid:
+        raise SmokeError("Flight qualification requires grpc+tls://host:port without URI credentials")
+    for key in ("FLIGHT_SQL_DRIVER", "FLIGHT_SQL_TLS_CA_FILE"):
+        path = Path(env[key])
+        if not path.is_absolute() or not path.is_file():
+            raise SmokeError(key + " must be an absolute existing file")
+    shutil.copyfile(Path(__file__).with_name("flight_profiles.yml"), project / "profiles.yml")
+
+
+def run_smoke(binary, *, build=False, transport="redis"):
     if build:
         require_integration_config()
     version = subprocess.run([binary, "--version"], capture_output=True, text=True, check=True)
@@ -88,6 +114,7 @@ def run_smoke(binary, *, build=False):
     with tempfile.TemporaryDirectory(prefix="redis-dbt-v2-") as directory:
         project = Path(directory) / "project"
         shutil.copytree(Path(__file__).parent / "smoke", project)
+        configure_transport(project, env, transport)
         # Keep all artifacts and logs outside the v1 project.
         env["DBT_LOG_PATH"] = str(Path(directory) / "logs")
         target = Path(directory) / "target"
@@ -129,12 +156,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dbt", required=True, help="Path or command name of the compiled dbt v2 executable")
     parser.add_argument("--build", action="store_true", help="Connect to Redis, build twice, and clean up")
+    parser.add_argument("--transport", choices=("redis", "flightsql"), default="redis")
     args = parser.parse_args()
     binary = shutil.which(os.path.expanduser(args.dbt))
     if binary is None:
         parser.error(f"Executable not found: {args.dbt}")
     try:
-        run_smoke(binary, build=args.build)
+        run_smoke(binary, build=args.build, transport=args.transport)
     except (OSError, ValueError, SmokeError, subprocess.CalledProcessError) as exc:
         print(f"Redis v2 smoke check failed: {exc}", file=sys.stderr)
         return 1

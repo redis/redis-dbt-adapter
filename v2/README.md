@@ -1,5 +1,10 @@
 # Redis adapter integration for dbt v2
 
+An unmerged [native Flight SQL candidate](FLIGHT_SQL.md) and
+[local qualification record](../docs/validation/issue51-2026-11-16.md) are available
+for #51. Current driver-source tests pass locally; the stable-driver session
+audit fails. The default engine pin remains direct-Redis only.
+
 **Adapter source:** [`alberttwong/dbt`](https://github.com/alberttwong/dbt).
 The Redis adapter is compiled into that Rust engine. This `v2/` directory
 contains the setup guide, profiles, integration fixtures, and validation tools.

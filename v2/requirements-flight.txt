@@ -1,0 +1,4 @@
+# Flight client and optional local Arrow runtime; no Python dbt adapter.
+adbc-driver-flightsql==1.13.0
+adbc-driver-manager==1.13.0
+pyarrow==26.0.0

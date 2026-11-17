@@ -1,0 +1,13 @@
+test_arrow_results_and_invalid_result (test_redis_runtime.RuntimeTests.test_arrow_results_and_invalid_result) ... ok
+test_bad_csv_does_not_replace_existing_table (test_redis_runtime.RuntimeTests.test_bad_csv_does_not_replace_existing_table) ... ok
+test_empty_csv_preserves_typed_schema (test_redis_runtime.RuntimeTests.test_empty_csv_preserves_typed_schema) ... ok
+test_empty_flight_retry_uses_fresh_reader_after_first_was_consumed (test_redis_runtime.RuntimeTests.test_empty_flight_retry_uses_fresh_reader_after_first_was_consumed) ... ok
+test_flight_retry_is_bounded_and_does_not_replay_one_shot_input (test_redis_runtime.RuntimeTests.test_flight_retry_is_bounded_and_does_not_replay_one_shot_input) ... ok
+test_reader_and_unknown_outcomes_are_not_replayed (test_redis_runtime.RuntimeTests.test_reader_and_unknown_outcomes_are_not_replayed) ... ok
+test_sampling_and_row_numbers_cross_batch_boundaries (test_redis_runtime.RuntimeTests.test_sampling_and_row_numbers_cross_batch_boundaries) ... ok
+test_table_ingest_retries_only_refused_publications (test_redis_runtime.RuntimeTests.test_table_ingest_retries_only_refused_publications) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.009s
+
+OK

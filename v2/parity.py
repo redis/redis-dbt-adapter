@@ -10,10 +10,10 @@ import subprocess
 import tempfile
 import uuid
 
-from smoke import require_integration_config, SmokeError, check_results, check_version
+from smoke import require_integration_config, SmokeError, check_results, check_version, configure_transport
 
 
-def run_parity(binary, keep_artifacts=False):
+def run_parity(binary, keep_artifacts=False, transport="redis"):
     require_integration_config()
     version = subprocess.run([binary, '--version'], capture_output=True, text=True, check=True)
     check_version(version.stdout + version.stderr)
@@ -24,6 +24,11 @@ def run_parity(binary, keep_artifacts=False):
     env = os.environ.copy()
     env.update(REDIS_DBT_V2_SCHEMA=schema, DBT_ALLOW_EXPERIMENTAL_ADAPTERS='yes',
                DBT_SEND_ANONYMOUS_USAGE_STATS='false', DBT_LOG_PATH=str(directory / 'logs'))
+    try:
+        configure_transport(project, env, transport)
+    except Exception:
+        shutil.rmtree(directory)
+        raise
     common = ['--project-dir', str(project), '--profiles-dir', str(project), '--target-path', str(target)]
     parsed = False
 
@@ -59,6 +64,8 @@ def run_parity(binary, keep_artifacts=False):
                 raise SmokeError('Missing successful parity model or snapshot results')
         assert_query(f'select count(*) from {table("trips_python")} where double_trips != trips * 2', 0)
         assert_query(f'select count(*) from {table("trips_python")}', 3)
+        if transport == 'flightsql':
+            operation('assert_exact_metadata')
         run('run-operation', 'violate_contract', fails=True)
         assert_query(f'select count(*) from {table("trips_contract")}', 3)
         operation('mutate_trips')
@@ -111,9 +118,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--dbt', required=True)
     parser.add_argument('--keep-artifacts', action='store_true')
+    parser.add_argument("--transport", choices=("redis", "flightsql"), default="redis")
     args = parser.parse_args()
     try:
-        run_parity(args.dbt, args.keep_artifacts)
+        run_parity(args.dbt, args.keep_artifacts, args.transport)
     except (OSError, ValueError, KeyError, subprocess.CalledProcessError, SmokeError) as error:
         parser.exit(1, f'Native parity failed: {error}\n')
 
