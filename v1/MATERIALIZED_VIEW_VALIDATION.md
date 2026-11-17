@@ -4,6 +4,25 @@ Validated November 16, 2026 (America/Los_Angeles) for
 [adapter issue #39](https://github.com/redis/redis-dbt-adapter/issues/39),
 starting from adapter commit `2f686af` with the accompanying implementation.
 
+## Integration with merged named-index support
+
+PR #49 merged into main as `31bc908`, adding table/incremental named indexes
+and the shared `redis_index_sql` helper. Merged that main revision into PR #50
+and resolved the overlapping adapter methods/documentation while preserving
+both the general index lifecycle and materialized-view refresh reconciliation.
+The existing array regressions remain enabled.
+
+- Latest stable driver confirmed as **v0.0.27**. Combined index and
+  materialized-view functional tests against that native library:
+  **20 passed**, 30.86 seconds. This includes `rename_rekey` index cases,
+  invalid index configurations, and materialized-view replacement/refresh.
+- Full merged functional suite on native source driver
+  `36f456a44fc1af7839e43ab5912a606ad8dadf92`:
+  **216 passed, 13 skipped, zero failures/errors**, 125.71 seconds, using
+  `pytest v1/adapter/tests/functional -n 4 -q`. Redis Software / Redis 8.8.0,
+  three shards and active 4× QPF were reconfirmed for this run.
+- Strict MkDocs build, Python compilation and `git diff --check`: passed.
+
 ## Driver source revalidation
 
 Built native driver main commit

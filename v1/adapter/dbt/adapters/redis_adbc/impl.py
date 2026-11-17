@@ -230,6 +230,41 @@ class RedisAdbcAdapter(SQLAdapter):
                 drop.extend(f"drop index if exists {quote(relation.schema)}.{quote(name)}" for name in names)
         return {"create": create, "drop": drop}
 
+    @available
+    def redis_index_sql(self, relation, index_dict, invocation_id: str) -> str:
+        """Create a named index, scoped to this build so rename swaps cannot
+        collide with the previous target's schema-wide index names."""
+        def invalid(reason):
+            raise CompilationError(f"Invalid Redis indexes config: {reason}")
+
+        if not isinstance(index_dict, dict):
+            invalid("each index must be a dictionary")
+        if index_dict.get("unique", False) is not False:
+            invalid("UNIQUE indexes are not supported")
+        unsupported = set(index_dict) - {"columns", "type", "unique"}
+        if unsupported:
+            invalid("unsupported options " + ", ".join(sorted(unsupported)) +
+                    "; expression and partial indexes are not supported")
+        columns = index_dict.get("columns")
+        if (not isinstance(columns, list) or not columns
+                or any(not isinstance(c, str) or not c for c in columns)):
+            invalid("columns must be a non-empty list of column names")
+        method = index_dict.get("type", "btree")
+        if method not in ("btree", "hash"):
+            invalid("type must be 'btree' or 'hash' (Redis Search compatibility hints)")
+        existing = {c.name for c in self.get_columns_in_relation(relation)}
+        if any(c not in existing for c in columns):
+            invalid("columns must name existing columns exactly; expression indexes are not supported")
+        # Include invocation_id: the old target still owns its names while
+        # indexes are created on __dbt_tmp. Table drop cleans up those names.
+        identity = json.dumps([relation.schema, relation.identifier, columns, method, invocation_id])
+        name = "dbt_idx_" + hashlib.sha256(identity.encode()).hexdigest()[:32]
+        def quote(value):
+            return '"' + value.replace('"', '""') + '"'
+
+        return (f"create index if not exists {quote(name)} on {relation} "
+                f"using {method} ({', '.join(quote(c) for c in columns)})")
+
     # --- type conversion for seeds -------------------------------------------------
 
     @classmethod
