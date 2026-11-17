@@ -112,11 +112,94 @@
   )
 {% endmacro %}
 
-{#- Redis has no materialized views; say so instead of dbt's "not implemented"
-    errors (or, for a table switched to materialized_view, a rename error). -#}
+{#- A rerun refreshes the stored query. SQL definition changes require
+    --full-refresh, as on dbt-postgres. Index configuration can be reconciled
+    independently; all validation runs before hooks or cleanup DDL. -#}
 {% materialization materialized_view, adapter='redis_adbc' %}
-  {{ exceptions.raise_compiler_error("materialized views aren't supported on Redis (" ~ this ~ "); use materialized='table' or 'incremental'") }}
+  {% set indexes = adapter.redis_mv_indexes(config.get('indexes', [])) %}
+  {% set policy = config.get('on_configuration_change', 'apply') %}
+  {% if policy not in ['apply', 'continue', 'fail'] %}
+    {{ exceptions.raise_compiler_error("on_configuration_change must be apply, continue or fail") }}
+  {% endif %}
+  {% set existing = load_cached_relation(this) %}
+  {% set target = this.incorporate(type='materialized_view') %}
+  {% set intermediate = make_intermediate_relation(target) %}
+  {% set backup = make_backup_relation(target, existing.type if existing else 'materialized_view') %}
+  {% set replace = existing is none or not existing.is_materialized_view or should_full_refresh() %}
+  {% set changes = {'create': [], 'drop': []} if replace else adapter.redis_mv_index_changes(target, indexes, invocation_id) %}
+  {% set changed = changes['create'] or changes['drop'] %}
+  {% if changed and policy == 'fail' %}
+    {{ exceptions.raise_compiler_error("Materialized view index configuration changed; on_configuration_change is fail for " ~ target) }}
+  {% endif %}
+  {% if changed and policy == 'continue' %}
+    {% do exceptions.warn("Materialized view index configuration changed; skipping " ~ target ~ " because on_configuration_change is continue") %}
+    {% do store_raw_result(name='main', message='skip ' ~ target, code='skip', rows_affected=-1) %}
+  {% else %}
+    {{ drop_relation_if_exists(load_cached_relation(intermediate)) }}
+    {{ drop_relation_if_exists(load_cached_relation(backup)) }}
+    {{ run_hooks(pre_hooks, inside_transaction=False) }}
+    {{ run_hooks(pre_hooks, inside_transaction=True) }}
+    {% if replace %}
+      {% call statement('main') %}
+        {{ get_create_materialized_view_as_sql(intermediate, sql) }}
+      {% endcall %}
+      {% set changes = adapter.redis_mv_index_changes(intermediate, indexes, invocation_id) %}
+      {% for ddl in changes['create'] %}
+        {% do run_query(ddl) %}
+      {% endfor %}
+      {% if existing is not none %}
+        {{ adapter.rename_relation(existing, backup) }}
+      {% endif %}
+      {{ adapter.rename_relation(intermediate, target) }}
+    {% else %}
+      {# Add indexes before removing any old ones; invalid columns preserve them. #}
+      {% for ddl in changes['create'] %}
+        {% do run_query(ddl) %}
+      {% endfor %}
+      {% call statement('main') %}
+        {{ refresh_materialized_view(target) }}
+      {% endcall %}
+      {% for ddl in changes['drop'] %}
+        {% do run_query(ddl) %}
+      {% endfor %}
+    {% endif %}
+    {% do apply_grants(target, config.get('grants'), should_revoke=replace) %}
+    {% do persist_docs(target, model) %}
+    {{ run_hooks(post_hooks, inside_transaction=True) }}
+    {{ adapter.commit() }}
+    {{ drop_relation_if_exists(load_cached_relation(backup)) }}
+    {{ run_hooks(post_hooks, inside_transaction=False) }}
+  {% endif %}
+  {{ return({'relations': [target]}) }}
 {% endmaterialization %}
+
+{% macro redis_adbc__get_create_materialized_view_as_sql(relation, sql) %}
+  create materialized view {{ relation }} as {{ sql }}
+{% endmacro %}
+
+{% macro redis_adbc__refresh_materialized_view(relation) %}
+  refresh materialized view {{ relation }}
+{% endmacro %}
+
+{#- Older dbt-adapters versions render the enum's materialized_view spelling
+    directly in DROP; SQL requires two words. -#}
+{% macro redis_adbc__drop_relation(relation) %}
+  {% if relation.is_materialized_view %}
+    {% call statement('drop_relation', auto_begin=False) %}
+      drop materialized view if exists {{ relation }} cascade
+    {% endcall %}
+  {% else %}
+    {{ default__drop_relation(relation) }}
+  {% endif %}
+{% endmacro %}
+
+{#- SQLAdapter's default rename emits ALTER TABLE for every relation type. -#}
+{% macro redis_adbc__rename_relation(from_relation, to_relation) %}
+  {% set kind = 'materialized view' if from_relation.is_materialized_view else ('view' if from_relation.is_view else 'table') %}
+  {% call statement('rename_relation') %}
+    alter {{ kind }} {{ from_relation }} rename to {{ adapter.quote_as_configured(to_relation.identifier, 'identifier') }}
+  {% endcall %}
+{% endmacro %}
 
 {#- Seeds: a reload without --full-refresh truncates the table, then loads
     it. With no transactions, a CSV whose columns the table doesn't have

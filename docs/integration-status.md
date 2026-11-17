@@ -71,8 +71,13 @@ registration, authentication, discovery, materializations, tests, or docs
 generation in an actual dbt run. Conversely, the finite dbt scenarios above do
 not establish every feature, platform, version, or deployment.
 
-Native limitations include autocommit without rollback, no materialized views,
-and table-only Python models. Native SELECT grants require dedicated Redis
+Native limitations include autocommit without rollback and table-only Python
+models. Native SQL materialized views support creation, refresh, replacement,
+metadata/catalog discovery, and supported nonunique indexes; see the
+[materialized-view guide](../v1/README.md#materialized-views) and
+[versioned validation record](../v1/MATERIALIZED_VIEW_VALIDATION.md).
+The new lifecycle evidence uses the direct native ADBC transport; it does not
+extend the historical Flight SQL qualification above. Native SELECT grants require dedicated Redis
 Software ACLs; see the [grant scope](../v1/README.md#sql-grants-through-dedicated-redis-software-acls). v2 static analysis remains
 disabled. See the [v1 limitations](../v1/adapter/README.md#features-and-limitations)
 and [v2 validation record](../v2/VALIDATION.md) before adopting either path.

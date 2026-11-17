@@ -151,7 +151,7 @@ actual native ADBC run results.
 
 ## Features and limitations
 
-- Tables, views, ephemeral models, Arrow bulk-loaded seeds, and snapshots
+- Tables, views, native SQL materialized views, ephemeral models, Arrow bulk-loaded seeds, and snapshots
 - SQL incremental models with `append`, `delete+insert`, `merge`, and `microbatch`
 - Model contracts, persisted relation and column descriptions, and Python table models
 - No SQL transactions or rollback: statements autocommit, and interrupted writes
@@ -162,9 +162,20 @@ actual native ADBC run results.
   are captured once in a temporary disk file to supply fresh input on retry. Bound
   SQL input, unknown stream types, Flight SQL, and unknown publication outcomes
   are not automatically replayed.
-- No materialized views. Native SELECT grants can opt into dedicated Redis Software ACLs; see [SQL grants](../README.md#sql-grants-through-dedicated-redis-software-acls).
+- Native SELECT grants can opt into dedicated Redis Software ACLs; see [SQL grants](../README.md#sql-grants-through-dedicated-redis-software-acls).
 - Python models run in the dbt process and load their inputs into its memory;
   incremental Python models are not supported
+
+Materialized-view reruns refresh the stored query; SQL definition changes require
+`--full-refresh`. Nonunique `indexes` and `on_configuration_change` are supported;
+UNIQUE indexes are rejected. The SQL requires driver v0.0.20+, with the lifecycle
+validated on v0.0.27. Driver v0.0.23+ rejects earlier storage catalogs; use a fresh
+isolated driver database or a supported import path when upgrading. Refresh and
+rename swaps autocommit and do not promise PostgreSQL transaction or uninterrupted
+concurrent-reader semantics. Index columns containing spaces require driver
+source commit `41d468d` or later; released v0.0.27 rejects them
+([driver #449](https://github.com/redis/redis-adbc-driver/issues/449)). See the
+[materialized-view guide](https://github.com/redis/redis-dbt-adapter/blob/main/v1/README.md#materialized-views).
 
 See the [adapter reference](https://github.com/redis/redis-dbt-adapter/blob/main/v1/README.md#adapter-reference)
 for all profile options, supported features, and limitations. The
