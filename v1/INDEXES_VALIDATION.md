@@ -110,3 +110,62 @@ endpoint is configured in this session.
 
 After merging main: **28 adapter unit tests passed**, **24 v2 runner tests
 passed**, and `git diff --check` passed.
+
+## Source-driver rerun — November 16, 2026
+
+The full functional suite now passes against the newer driver source.
+
+- Adapter revision: `c68a1e0ada9f999203d1cd904d427e59c9203689`
+  (`dbt-redis-adbc` 0.3.1, with current main merged).
+- Driver revision:
+  [`36f456a44fc1af7839e43ab5912a606ad8dadf92`](https://github.com/redis/redis-adbc-driver/commit/36f456a44fc1af7839e43ab5912a606ad8dadf92),
+  “Coordinate catalog writes before native statement execution (#451)”.
+  This source is newer than published release v0.0.27; the default release
+  resolver remains `latest`.
+- Built from a clean source checkout with Go 1.27.3, cgo, macOS arm64, using
+  `scripts/build_driver.sh` and `DRIVER_VERSION` set to the full commit above.
+- Built native library SHA-256:
+  `fd94c50379ce75f87ff71ef4c6d0228baf80e339a8a11d665baa04e8fc64caaa`.
+- Dedicated Redis Enterprise/Software 8.6.2 RAM database, three primary shards,
+  noeviction, verified active 4x QPF and effective Search workers, trusted TLS
+  and named-user authentication. Fixture verification passed both before and
+  after testing, including rejection of plaintext, untrusted CA and missing or
+  incorrect authentication. Existing unrelated containers were left untouched.
+- Python 3.13.16, dbt Core 1.12.6, dbt-adapters 1.24.5,
+  ADBC driver manager 1.12.0, PyArrow 26.0.0.
+
+After building the driver and loading the dedicated fixture's private
+`.redis-enterprise/env.sh`, ran the repository's standard functional command
+from `v1/`:
+
+```sh
+.venv/bin/pytest -n 4 -q
+```
+
+**Result: 206 passed, 28 skipped, zero failures/errors in 152.62 seconds.**
+All 16 index tests passed within this full run. The adapter's normal
+safe-publication retry behavior was enabled; no test assertions were weakened
+and no retry-disabling plugin was used.
+
+The 28 existing skips cover nine materialized-view cases, six array cases,
+five general-grant cases, three zero-copy-clone cases, two Flight SQL cases,
+one unused catalog-method case, one incremental Python-model case and one
+SQL string-escaping case. The separately gated SELECT RBAC integration test was
+not enabled because its dedicated role/reader configuration was not provisioned.
+
+Also ran, from the repository root:
+
+```sh
+v1/.venv/bin/pytest v1/adapter/tests/unit scripts/tests v1/scripts/tests v2/tests -q
+```
+
+**Result: 70 passed and 60 subtests passed**, zero failures. These include the
+28 adapter unit tests and 24 v2 runner tests. Unit and functional suites were
+invoked separately because pytest rejects the functional suite's nested
+`pytest_plugins` declaration when collecting the entire `adapter/tests` parent.
+
+The prior catalog-conflict results above are historical; they were not
+reproduced in this source-driver rerun. This does not claim that published
+v0.0.27, the full taxi project, the native v2 engine, Flight SQL transport or
+the driver's own Go/ADBC validation suites were retested. The dedicated
+source-rerun fixture was removed after validation.
