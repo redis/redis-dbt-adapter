@@ -63,3 +63,42 @@ runner, including each matrix entry. `up --github-env` masks the generated
 password and exports the verified URI, username, password, CA path, and driver
 path through `GITHUB_ENV`. No preconfigured database secrets or external test
 cluster are required. The native v2 workflow uses the same setup.
+
+## Flight SQL qualification
+
+Build a committed public Flight server checkout with the **latest stable Redis
+ADBC driver release** on each invocation:
+
+```sh
+python3 scripts/build_flight_server.py --source /path/to/redis-apache-arrow-flight \
+  --output /tmp/dbt-flight-server
+```
+
+The source checkout is left intact. The helper builds in a temporary directory
+and writes `/tmp/dbt-flight-server.json` with the source commit, resolved driver
+release/commit, Go module version, toolchain, and binary SHA-256. Keep that
+resolved evidence with the validation result; do not substitute an older driver
+pin for the latest-release build policy.
+
+Run the server on loopback using `--auth redis-acl`, `--tls-cert`, `--tls-key`,
+and `--adbc-option adbc.redis.tls_ca_file="$REDIS_TLS_CA_FILE"`. Its `REDIS_URI`
+must point to the verified Enterprise fixture above. Use a certificate valid
+for the Flight hostname and trust its CA on the client. Sessions must be enabled.
+
+Export `FLIGHT_SQL_URI=grpc+tls://localhost:<port>`, `FLIGHT_SQL_USERNAME`,
+`FLIGHT_SQL_PASSWORD`, and `FLIGHT_SQL_TLS_CA_FILE` for this separate client hop.
+Install `v1/adapter[flightsql]` and the project's development dependencies, then:
+
+```sh
+cd v1
+FLIGHT_SQL_SECURITY_TESTS=1 .venv/bin/python -m pytest \
+  adapter/tests/integration/test_flight_security.py -q
+env -u REDIS_ADBC_DRIVER REDIS_ADBC_TRANSPORT=flightsql \
+  .venv/bin/python -m pytest adapter/tests/functional -q
+```
+
+Retain the `REDIS_*` backend environment in both modes. The security probes
+check verified Flight TLS, accepted/rejected credentials, untrusted certificate
+rejection, and isolated concurrent sessions recovering after a failed statement.
+The functional suite supplies actual dbt workflow coverage. Use private logs
+for diagnosis; publish only evidence checked for credentials and private keys.

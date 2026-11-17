@@ -202,10 +202,11 @@ def _redact_uri(uri: str, keep_user: bool = True) -> str:
 
 
 class RedisAdbcCursor:
-    """Retry native refused publications, without replaying committed SQL/input."""
+    """Retry explicit refused publications, without replaying committed SQL/input."""
 
-    def __init__(self, conn):
+    def __init__(self, conn, native=True):
         self._conn = conn
+        self._native = native
         self._cursor = conn.cursor()
 
     def __getattr__(self, name):
@@ -221,12 +222,22 @@ class RedisAdbcCursor:
         for attempt in range(20):
             try:
                 return action()
-            except adbc_driver_manager.OperationalError as error:
+            except adbc_driver_manager.Error as error:
                 # This specific 40001 is a refused publication, not an unknown
                 # commit outcome. Other errors and consumed input must surface.
                 if not (
                     replayable
-                    and error.sqlstate == "40001"
+                    and (
+                        (self._native and error.status_code == AdbcStatusCode.IO
+                         and error.sqlstate == "40001")
+                        or (
+                            not self._native
+                            and error.status_code == AdbcStatusCode.IO
+                            and error.vendor_code == 14
+                            and "[redis] snapshot catalog changed concurrently; retry the statement (40001)" in str(error)
+                            and "(Unavailable;" in str(error)
+                        )
+                    )
                     and "snapshot catalog changed concurrently; retry the statement" in str(error)
                     and attempt < 19
                 ):
@@ -286,7 +297,7 @@ class RedisAdbcHandle:
     def cursor(self):
         # Close finished cursors eagerly so statements don't pile up.
         self._cursors = [c for c in self._cursors if not c._closed]
-        cur = RedisAdbcCursor(self.conn) if self.native else self.conn.cursor()
+        cur = RedisAdbcCursor(self.conn, native=self.native)
         self._cursors.append(cur)
         return cur
 
@@ -397,6 +408,23 @@ class RedisAdbcConnectionManager(SQLConnectionManager):
         # past its first batch comes from fetching the rows, which dbt does
         # outside add_query's exception_handler.
         with self.exception_handler(sql):
+            if self.get_thread_connection().credentials.transport == "flightsql":
+                from dbt_common.clients.agate_helper import empty_table
+
+                _, cursor = self.add_query(self._add_query_comment(sql), auto_begin)
+                try:
+                    response = self.get_response(cursor)
+                    table = self.get_result_from_cursor(cursor, limit) if fetch else empty_table()
+                    # Hooks can SELECT with fetch=False, and a fetch limit can
+                    # leave unread batches. Consume/discard those batches so
+                    # the next RPC doesn't race cancellation of this stream.
+                    if cursor.description is not None:
+                        with cursor.fetch_record_batch() as reader:
+                            for _ in reader:
+                                pass
+                    return response, table
+                finally:
+                    cursor.close()
             return super().execute(sql, auto_begin=auto_begin, fetch=fetch, limit=limit)
 
     def cancel(self, connection: Connection):

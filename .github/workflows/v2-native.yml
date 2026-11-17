@@ -17,6 +17,7 @@ jobs:
     timeout-minutes: 60
     env:
       CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_BUILD_JOBS: "2"
       RUST_LOG: trace
     steps:
       - uses: actions/checkout@v7
@@ -31,16 +32,22 @@ jobs:
 
       - name: Read pinned sources
         id: sources
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           python3 - <<'PY'
-          import json, os, re
+          import json, os, re, subprocess
           from pathlib import Path
           data = json.loads(Path("v2/upstream.json").read_text())
           commit = data["implementation_commit"]
           assert re.fullmatch(r"[0-9a-f]{40}", commit), "Engine commit must be pinned"
+          release = subprocess.check_output(
+              ["bash", "v1/scripts/resolve_driver_version.sh"], text=True,
+              env={**os.environ, "DRIVER_VERSION": data["driver_version"]},
+          ).strip()
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
               print(f"engine_commit={commit}", file=output)
-              print(f"driver_version={data['driver_version']}", file=output)
+              print(f"driver_version={release}", file=output)
           PY
 
       - uses: actions/checkout@v7
@@ -85,6 +92,12 @@ jobs:
           REDIS_ADBC_DRIVER: ${{ github.workspace }}/v1/driver/libadbc_driver_redis.so
         run: python3 v2/smoke.py --dbt "$GITHUB_WORKSPACE/engine/target/debug/dbt" --build
 
+      - name: Audit the native Rust ADBC API and concurrent connections
+        working-directory: engine
+        env:
+          REDIS_ADBC_DRIVER: ${{ github.workspace }}/v1/driver/libadbc_driver_redis.so
+        run: cargo test -p dbt-adapter-engine --test redis_adbc -- --ignored
+
       - name: Run native feature parity
         env:
           REDIS_ADBC_DRIVER: ${{ github.workspace }}/v1/driver/libadbc_driver_redis.so
@@ -112,3 +125,39 @@ jobs:
         env:
           REDIS_ADBC_DRIVER: ${{ github.workspace }}/v1/driver/libadbc_driver_redis.so
         run: python3 v2/taxi.py --dbt "$GITHUB_WORKSPACE/engine/target/debug/dbt" --csv "$GITHUB_WORKSPACE/v1/data/yellow_tripdata_2019-01.csv.gz"
+
+      - name: Record resolved versions and binary identity
+        if: always()
+        env:
+          ENGINE_COMMIT: ${{ steps.sources.outputs.engine_commit }}
+          DRIVER_RELEASE: ${{ steps.sources.outputs.driver_version }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, importlib.metadata, json, os, platform, subprocess
+          from pathlib import Path
+          binary = Path("engine/target/debug/dbt")
+          versions = {
+              "engine_commit": os.environ["ENGINE_COMMIT"],
+              "driver_release": os.environ["DRIVER_RELEASE"],
+              "integration_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
+              "platform": platform.platform(),
+          }
+          if binary.exists():
+              versions["dbt_version"] = subprocess.check_output([str(binary), "--version"], text=True).strip()
+              versions["dbt_sha256"] = hashlib.sha256(binary.read_bytes()).hexdigest()
+          for package in ("pyarrow", "adbc-driver-manager"):
+              try:
+                  versions[package] = importlib.metadata.version(package)
+              except importlib.metadata.PackageNotFoundError:
+                  pass
+          Path(os.environ["RUNNER_TEMP"], "native-versions.json").write_text(json.dumps(versions, indent=2) + "\n")
+          PY
+      - name: Retain native version and dependency provenance
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-validation-provenance
+          path: |
+            ${{ runner.temp }}/native-versions.json
+            engine/Cargo.lock
+          if-no-files-found: warn

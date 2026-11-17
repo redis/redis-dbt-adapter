@@ -64,6 +64,9 @@ def test_retries_are_bounded_and_preserve_error(sleep):
     (None, conflict("publication outcome unknown")),
     (None, conflict("snapshot retention expired")),
     (None, adbc.OperationalError("cancelled", status_code=adbc.AdbcStatusCode.CANCELLED)),
+    (None, adbc.OperationalError(
+        "snapshot catalog changed concurrently; retry the statement",
+        status_code=adbc.AdbcStatusCode.CANCELLED, sqlstate="40001")),
 ])
 @patch("dbt.adapters.redis_adbc.connections.time.sleep")
 def test_unsafe_replays_are_refused(sleep, parameters, error):
@@ -134,7 +137,50 @@ def test_context_manager_and_handle_close_latest_cursor():
     conn.close.assert_called_once()
 
 
-def test_flight_cursors_remain_unwrapped():
+@patch("dbt.adapters.redis_adbc.connections.time.sleep")
+def test_flight_handle_retries_explicit_wire_refusal(sleep):
+    first, second = MagicMock(), MagicMock()
+    first.execute.side_effect = adbc.OperationalError(
+        "[redis] snapshot catalog changed concurrently; retry the statement (40001) (Unavailable; ExecuteUpdate)",
+        status_code=adbc.AdbcStatusCode.IO, vendor_code=14,
+    )
     conn = MagicMock()
-    handle = RedisAdbcHandle(conn, native=False)
-    assert handle.cursor() is conn.cursor.return_value
+    conn.cursor.side_effect = [first, second]
+    RedisAdbcHandle(conn, native=False).cursor().execute("insert into t values (1)")
+    first.execute.assert_called_once_with("insert into t values (1)")
+    second.execute.assert_called_once_with("insert into t values (1)")
+    sleep.assert_called_once()
+
+
+@patch("dbt.adapters.redis_adbc.connections.time.sleep")
+def test_flight_refused_publication_preserves_statement_boundary(sleep):
+    error = adbc.OperationalError(
+        "[FlightSQL] I/O: [redis] snapshot catalog changed concurrently; retry the statement (40001) (Unavailable; ExecuteUpdate)",
+        status_code=adbc.AdbcStatusCode.IO, vendor_code=14,
+    )
+    cursor, cursors = cursor_with_errors([None, None])
+    cursor._native = False
+    cursors[0].execute.side_effect = [None, error]
+    cursor.execute("insert into t values (1); insert into t values (2);")
+    assert [call.args[0] for call in cursors[0].execute.call_args_list] == [
+        "insert into t values (1);", "insert into t values (2);",
+    ]
+    cursors[1].execute.assert_called_once_with("insert into t values (2);")
+    sleep.assert_called_once()
+
+
+@pytest.mark.parametrize("message,status,vendor", [
+    ("snapshot catalog changed concurrently; retry the statement", adbc.AdbcStatusCode.IO, 14),
+    ("[redis] snapshot catalog changed concurrently; retry the statement (40001) (Unavailable; ExecuteUpdate)", adbc.AdbcStatusCode.IO, 8),
+    ("[redis] snapshot catalog changed concurrently; retry the statement (40001) (Unavailable; ExecuteUpdate)", adbc.AdbcStatusCode.CANCELLED, 14),
+    ("publication outcome unknown (Unavailable; ExecuteUpdate)", adbc.AdbcStatusCode.IO, 14),
+])
+@patch("dbt.adapters.redis_adbc.connections.time.sleep")
+def test_flight_does_not_retry_ambiguous_or_other_wire_errors(sleep, message, status, vendor):
+    error = adbc.OperationalError(message, status_code=status, vendor_code=vendor, sqlstate="40001")
+    cursor, cursors = cursor_with_errors([error])
+    cursor._native = False
+    with pytest.raises(adbc.Error) as raised:
+        cursor.execute("insert into t values (1)")
+    assert raised.value is error
+    sleep.assert_not_called()

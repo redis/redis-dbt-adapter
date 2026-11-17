@@ -1,8 +1,9 @@
 # dbt integration status and remaining work
 
 Tracking: [issue #40](https://github.com/redis/redis-dbt-adapter/issues/40).
-Documentation and source reviewed November 16, 2026. This review did not run a
-new Redis integration test. Historical results retain their original versions.
+Live qualification completed November 16, 2026: see the
+[versioned results and API audit](validation/issue40-2026-11-16.md). Historical
+results below retain their original versions.
 
 ## Connection paths
 
@@ -10,7 +11,7 @@ new Redis integration test. Historical results retain their original versions.
 | --- | --- | --- |
 | dbt Core 1.x → Redis ADBC | ✅ 🔌 Available through community-origin `dbt-redis-adbc` | [Python adapter](../v1/adapter/README.md), `dbt-core>=1.10,<2`; the example requires `>=1.10.8,<2`. Install the native Redis driver separately. |
 | dbt v2 → Redis ADBC | Experimental, validated in a custom engine | Build the [Redis-enabled Rust fork](../v2/README.md#engine-implementation) at the pinned commit. Installing the Python adapter or just the driver does not register Redis in stock dbt v2. |
-| dbt Core 1.x → ADBC Flight SQL → Redis Flight SQL server | Implemented, with scoped local validation | Use the [v1 Flight SQL transport](../v1/adapter/README.md#flight-sql) and a separately deployed server. Flight TLS/authentication and v2 remain unverified; see the [validation record](../v1/FLIGHT_SQL_VALIDATION.md). |
+| dbt Core 1.x → ADBC Flight SQL → Redis Flight SQL server | Implemented, with scoped local validation | Use the [v1 Flight SQL transport](../v1/adapter/README.md#flight-sql) and a separately deployed server. Verified TLS/authentication and 192 functional passes on the recorded macOS source build; [qualification and limits](validation/issue40-2026-11-16.md). Native v2 Flight SQL is unsupported ([#51](https://github.com/redis/redis-dbt-adapter/issues/51)). |
 
 The direct v1 and v2 paths load the Redis native library locally. The v1 Flight
 SQL transport instead loads the Flight SQL client library in dbt and runs the
@@ -25,9 +26,9 @@ does not establish Redis, Inc. maintenance, product support, or an SLA.
 
 The driver's [data-tool comparison](https://github.com/redis/redis-adbc-driver/blob/main/docs/data-engineering-adbc-support.md)
 already lists dbt as ✅ 🔌, links the v1 adapter and experimental v2 fork,
-distinguishes end-to-end validation from SQL replay, and leaves Flight SQL
-unverified in that comparison. The newer v1 Flight SQL validation below has a
-narrower tested scope than full deployment qualification. The issue's original “row 7” is now inventory entry 10. The original
+distinguishes end-to-end validation from SQL replay, and historically left
+Flight SQL unverified. The November 16 source qualification below adds actual
+authenticated Flight workflow evidence with finite deployment limits. The issue's original “row 7” is now inventory entry 10. The original
 “Redis adapter still required” statement is obsolete for Core 1.x.
 
 When reusing this comparison, link `dbt-redis-adbc` as the community-origin
@@ -37,8 +38,8 @@ maintenance or support. Suggested summary:
 > Redis ADBC integration is available through `dbt-redis-adbc` for dbt Core
 > 1.10–1.x. The companion project documents end-to-end workflows and functional
 > tests. Experimental dbt v2 support requires a custom Rust engine. The v1 Flight
-> SQL transport has scoped local validation; Flight TLS/authentication and v2
-> Flight SQL remain unverified.
+> SQL transport passed scoped authenticated TLS qualification. Native v2 Flight
+> SQL remains unsupported.
 
 ## Validation evidence and limits
 
@@ -54,16 +55,24 @@ latest published driver through [upstream.json](../v2/upstream.json), matching
 selection does not identify or retroactively validate a driver release in the
 historical v0.0.16 runs; retain the resolved release in each new run's evidence.
 
-The [v1 Flight SQL validation record](../v1/FLIGHT_SQL_VALIDATION.md), dated
-November 2, 2026, reports `dbt debug` passing and 192 functional tests passing
-with 26 skipped, on macOS arm64, Python 3.14.10, Core 1.12.6, ADBC manager and
-Flight client 1.13.0, and PyArrow 26.0.0. It covers models, seeds, snapshots,
-incremental strategies, Python models, tests, and docs/catalog generation.
-The server reported `dev`, with no certified immutable build identity; Flight
-TLS and authentication were disabled. Redis backend build/trust/credentials
-were not independently requalified. The temporary logs are not published
-artifacts. These limits prevent treating this as a fully versioned, authenticated
-Flight deployment qualification.
+The [November 16 qualification](validation/issue40-2026-11-16.md) adds:
+
+- Native dbt-oss **2.0.11** at engine commit
+  `754f0a47164f86226dc568096ac56906ff9d2e69`, against Redis Enterprise **8.6.2**
+  with three shards, Search, active QPF 4x, verified TLS and named-user auth;
+  driver **v0.0.27**, the latest stable release at build/recheck.
+- A passing live Rust ADBC 1.1 API/concurrency audit, two smoke builds, expanded
+  parity, credential precedence, and full sampled taxi workflows. Taxi:
+  **82 successes / one configured warning**; empty build: **82 successes**.
+- Authenticated TLS v1 Flight SQL: **192 passed, 26 skipped, no warnings**, plus
+  **5 security/session probes**. Public Flight source
+  `4d91e37135080be7f0eeb770fc89fa7adeb14bc8` was built with the latest stable
+  Redis driver. Core 1.12.6, Python 3.13.16, manager/client 1.13.0, PyArrow 26.0.0.
+
+The [earlier November 2 Flight record](../v1/FLIGHT_SQL_VALIDATION.md) used an
+unversioned `dev` server with Flight TLS/auth disabled. Those historical limits
+remain attached to that run; they do not describe the new authenticated source
+qualification. Both records describe finite tests, not every deployment.
 
 The driver's [differential SQL harness](https://github.com/redis/redis-adbc-driver/tree/main/go/pgdiff)
 replays captured dbt-postgres statements. It cannot establish adapter
@@ -91,26 +100,24 @@ in the [engine fork](https://github.com/alberttwong/dbt/pull/3), with historical
 tracking in [issue #27](https://github.com/redis/redis-dbt-adapter/issues/27).
 They do not establish inclusion in `dbt-labs/dbt`.
 
-Remaining acceptance criteria for an upstream contribution are tracked here
-under issue #40:
+The assessed upstream contribution and candidate-validation milestones are now
+complete within #40's tracking scope:
 
-- [ ] Rebase the Redis engine changes onto an identified `dbt-labs/dbt` commit
-  and open/link an upstream adapter contribution following the
-  [dbt v2 adapter guide](https://docs.getdbt.com/guides/adapter-creation-v2).
-- [ ] Recheck adapter registration, profile/auth fields, driver installation
-  and loading, metadata discovery, macros, and basic materializations against
-  that upstream source; record the source commit and review outcome.
-- [ ] Audit the target engine's required ADBC API/version surface against the
-  chosen Redis driver: initialization/options, metadata, statement execution,
-  binding/ingestion, Arrow types, autocommit, and error/status handling. Record
-  unsupported calls and concrete failures rather than inferring completeness
-  from smoke success.
-- [ ] Exercise connection reuse and concurrency with multiple dbt threads,
-  independent schemas, failed statements, and cleanup. Record exact engine,
-  driver, Redis, OS, and optional Python runtime versions plus artifacts.
-- [ ] Run smoke, parity, TLS/auth, and taxi validation on that candidate using
-  the [existing commands](../v2/README.md). Record failures and unsupported
-  scenarios, and link the actual CI run before expanding the support claim.
+- [x] Reconcile with identified upstream source
+  `de5f46bf8e58a7e6e635b6d15ebcd09482b56e2f` and submit
+  [dbt-labs/dbt#17195](https://github.com/dbt-labs/dbt/pull/17195).
+- [x] Recheck registration, profile/auth mapping, driver loading, metadata,
+  macros, and materializations; compile the reconciled native engine.
+- [x] Run the live Rust ADBC 1.1 surface/concurrency audit and record its exact
+  versions, API coverage and limits in [the qualification](validation/issue40-2026-11-16.md).
+- [x] Exercise four isolated connections, reuse after failed statements, and
+  cleanup; verify credential precedence over TLS.
+- [x] Record actual smoke, parity, Python/CSV, docs/catalog, and full taxi runs.
+
+Upstream inclusion is still pending. [#63](https://github.com/redis/redis-dbt-adapter/issues/63)
+tracks the CodeScene quality gate, and [#64](https://github.com/redis/redis-dbt-adapter/issues/64)
+tracks the contributor CLA and maintainer-only fork-CI approval. The stock dbt
+v2 executable does not acquire Redis support from a submitted PR.
 
 ## Flight SQL feasibility and acceptance criteria
 
@@ -129,26 +136,29 @@ the library and URI failed: `adbc.redis.default_schema` was an unknown option.
 These changes establish an implemented v1 route, rather than generic Flight
 endpoint availability. Native v2 profile/loading changes require separate work.
 
-Remaining acceptance criteria under issue #40 (v1 implementation tracked in
-[issue #36](https://github.com/redis/redis-dbt-adapter/issues/36)):
+The Flight milestones and follow-up boundaries are explicit:
 
-- [x] Implement a distinct v1 Flight connection/profile path, session handling,
-  Redis metadata supplementation, and seed/Arrow ingestion behavior.
-- [x] Record a scoped v1 functional run covering materializations, snapshots,
-  type mappings, isolation, tests, and docs generation, including skips and
-  concrete diagnostic failures.
-- [ ] Pin Flight server and server-side Redis driver builds and independently
-  qualify the Redis version and backend TLS/authentication. Record all client,
-  dbt, server, Redis, and OS versions plus durable run artifacts.
-- [ ] Validate Flight login, rejected credentials, verified TLS, session routing,
-  concurrent connections, and cleanup after failure against that pinned pair.
-  Document client/server installation and unsupported deployment features.
-- [ ] Reproduce the functional coverage in that authenticated deployment;
-  retain skips and failures explicitly. The earlier unauthenticated local run
-  does not qualify other platforms or the full taxi dataset.
-- [ ] Assess and implement the separate v2 Flight SQL profile/connection path,
-  then validate metadata, generated SQL, types, writes/materializations, tests,
-  and docs end to end before claiming v2 Flight SQL support.
+- [x] Implement a distinct v1 profile/connection path, session handling,
+  Redis metadata supplementation, and Arrow ingestion.
+- [x] Build committed public Flight source with the **latest stable Redis ADBC
+  release on every invocation**, recording resolved revisions and binary identity.
+- [x] Independently verify the Redis Enterprise backend version, QPF, TLS/auth,
+  and rejection cases; qualify the separate Flight TLS/authentication hop.
+- [x] Run concurrent session/failure probes and the full authenticated v1
+  functional suite, retaining skip counts and test summaries.
+- [x] Assess the separate v2 path through actual configuration probes, record
+  the unsupported-profile/URI failures, and track implementation in
+  [#51](https://github.com/redis/redis-dbt-adapter/issues/51).
 
-Existing SQL compatibility issues remain in the driver tracker; this checklist
-does not duplicate them or claim that a transport change resolves them.
+Native v2 Flight SQL is **not implemented or claimed**. Other platforms,
+multireplica Flight deployments, and the full v1 taxi dataset over Flight are
+outside the recorded local qualification. The new Linux workflow must be
+judged by its actual run results, not by its presence.
+
+Concrete regressions and fixes are tracked in
+[#58](https://github.com/redis/redis-dbt-adapter/issues/58),
+[#59](https://github.com/redis/redis-dbt-adapter/issues/59),
+[#60](https://github.com/redis/redis-dbt-adapter/issues/60),
+[#61](https://github.com/redis/redis-dbt-adapter/issues/61), and
+[#62](https://github.com/redis/redis-dbt-adapter/issues/62). Existing SQL
+compatibility issues remain separately tracked in the driver repository.

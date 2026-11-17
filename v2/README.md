@@ -6,13 +6,14 @@ contains the setup guide, profiles, integration fixtures, and validation tools.
 Start with [building the tested engine](#engine-implementation), then
 [configure a connection and run the smoke checks](#smoke-checks).
 
-**Experimental native Redis support is available in our engine fork.** macOS arm64
-and Linux builds of dbt-oss 2.0.8 passed this fixture against Redis 8.6.2 and
-Redis ADBC v0.0.16: parse, full-refresh build, a second incremental build, all
-five tests, and schema cleanup. The stock dbt v2 binary does not include Redis.
-The pinned feature-parity implementation also validates the taxi example and its Python
-model, snapshots, contracts, merge, microbatch, persisted docs, and CSV loader.
-See [VALIDATION.md](VALIDATION.md) for the exact scope and review status.
+**Experimental native Redis support is available in the engine fork.** The
+[November 16 qualification](../docs/validation/issue40-2026-11-16.md) passed
+smoke, the expanded parity fixture, and the full sampled taxi workflow on
+macOS arm64 with dbt-oss 2.0.11, driver v0.0.27, and Redis Enterprise 8.6.2 with
+verified TLS/authentication and active QPF 4x. Historical Linux results used
+dbt-oss 2.0.8 and driver v0.0.16; see [VALIDATION.md](VALIDATION.md).
+The [upstream contribution](https://github.com/dbt-labs/dbt/pull/17195) is pending;
+the stock dbt v2 binary does not include Redis. Static analysis remains disabled.
 
 The Python v1 adapter, its dependencies, driver tooling, and NYC taxi example
 live in [`../v1/`](../v1/README.md). The v2 runner uses Python 3.13+ and the
@@ -35,7 +36,7 @@ coverage is in [engine PR #3](https://github.com/alberttwong/dbt/pull/3).
 git clone https://github.com/alberttwong/dbt.git redis-dbt-engine
 cd redis-dbt-engine
 git remote add upstream https://github.com/dbt-labs/dbt.git
-git checkout 90178580bd6f3353d758fff770fdc2c58c985ad0
+git checkout 754f0a47164f86226dc568096ac56906ff9d2e69
 # Requires the checkout's Rust toolchain, a C/C++ toolchain, and protoc.
 cargo build -p dbt-sa-cli
 # Executable: target/debug/dbt
@@ -116,9 +117,11 @@ native workflow builds the pinned engine and can run the smoke, feature-parity,
 TLS, and full taxi suites. [Linux verification passed on October 21, 2026](https://github.com/alberttwong/redis-dbt-adapter-with-project/actions/runs/39623533131).
 Redis stays experimental and static analysis is disabled.
 
-The feature-parity source is pinned on engine branch `codex/redis-feature-parity`
-and merged in engine PR #3. The connection-option patch received human
-verification before commit.
+The current candidate is pinned on engine branch `codex/redis-adbc-upstream`
+and submitted as [upstream PR #17195](https://github.com/dbt-labs/dbt/pull/17195).
+The earlier feature-parity milestone was merged in engine PR #3. The current
+[API audit and qualification](../docs/validation/issue40-2026-11-16.md) retain
+source-specific results; upstream review and CI approval remain separate.
 
 v2 reports ephemeral nodes as `skipped` in `run_results.json`, even when its CLI
 calls them no-ops. The runner accepts this only for `trips_input`; every seed,
@@ -155,11 +158,13 @@ RUST_LOG=trace python3 v2/taxi.py --dbt /absolute/path/to/dbt-v2 \
   --csv "$PWD/v1/data/yellow_tripdata_2019-01.csv.gz"
 ```
 
-Use the latest Redis ADBC release from `redis/redis-adbc-driver` (v0.0.27 at validation) for the parity implementation, including enforced primary
-key, unique, and foreign key constraints. Upgrades from older driver storage
-formats require a fresh, isolated Redis database and reloading the data; there
-is no automatic storage migration. Historical results in `VALIDATION.md` retain
-the versions actually tested. Build the engine with its default
+Use the latest stable Redis ADBC release from `redis/redis-adbc-driver`.
+The current candidate was qualified with v0.0.27, including enforced primary
+key, unique, and foreign key constraints; record the release resolved for each run.
+Upgrades from older driver storage formats require a fresh, isolated Redis
+database and reloading the data; there is no automatic storage migration.
+Historical results in `VALIDATION.md` retain their actual versions.
+Build the engine with its default
 features (`cargo build -p dbt-sa-cli`) so docs generation has the embedded UI.
 For a JSON warehouse catalog, request `dbt build --write-catalog`; v2's docs
 command exports its index and does not always produce the legacy JSON catalog.

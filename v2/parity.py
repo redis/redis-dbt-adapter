@@ -79,8 +79,11 @@ def run_parity(binary, keep_artifacts=False):
             output.write('id,name\n10,a\n20,b\n30,c\n40,d\n50,e\n')
         operation('load_parity_csv', path=str(csv_path))
         assert_query(f'select count(*) from {table("csv_sample")}', 2)
-        assert_query(f'select sum(file_row) from {table("csv_sample")}', 4)
-        assert_query(f'select sum(id) from {table("csv_sample")}', 40)
+        # BIGINT SUM returns an exact decimal in newer drivers. Assert these
+        # small integer totals as BIGINT rather than relying on Jinja's int
+        # filter to coerce a decimal object.
+        assert_query(f'select cast(sum(file_row) as bigint) from {table("csv_sample")}', 4)
+        assert_query(f'select cast(sum(id) as bigint) from {table("csv_sample")}', 40)
         run('docs', 'generate', '--write-catalog')
         catalog = json.loads((target / 'catalog.json').read_text())
         if catalog.get('errors'):

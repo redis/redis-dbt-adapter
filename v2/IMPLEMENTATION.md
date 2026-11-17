@@ -1,6 +1,6 @@
 # Redis v2 implementation checklist
 
-Baseline: [`4bb4caa`](https://github.com/dbt-labs/dbt/tree/4bb4caa4ae1e7f4354c7817093a55514c6cbea41).
+Current baseline: [`de5f46bf8`](https://github.com/dbt-labs/dbt/tree/de5f46bf8e58a7e6e635b6d15ebcd09482b56e2f).
 Upstream changes should be contributed from the [`alberttwong/dbt`](https://github.com/alberttwong/dbt)
 fork. Keep the existing Python package and its `<2` dependencies in `v1/`.
 
@@ -73,3 +73,17 @@ merge, snapshots, microbatch, and empty builds with unit-test fixtures.
 See [VALIDATION.md](VALIDATION.md) for evidence and limitations. The pinned engine
 is merged in [engine PR #3](https://github.com/alberttwong/dbt/pull/3).
 Linux parity and trusted TLS passed in the [manual workflow](https://github.com/alberttwong/redis-dbt-adapter-with-project/actions/runs/39623533131).
+
+## Current contribution and API audit
+
+[Upstream PR #17195](https://github.com/dbt-labs/dbt/pull/17195) contains the
+reconciled candidate pinned by `upstream.json`. The
+[November 16 record](../docs/validation/issue40-2026-11-16.md) documents a live
+Rust ADBC 1.1 API/concurrency audit, current-driver smoke/parity, and full sampled
+taxi validation. Driver v0.0.27 exposed refused-publication and Decimal256 gaps;
+the candidate fixes those with regression coverage and bounded safe retries.
+
+This is a submitted contribution, not upstream inclusion. Code health is tracked
+in [#63](https://github.com/redis/redis-dbt-adapter/issues/63), CLA/fork-CI approval
+in [#64](https://github.com/redis/redis-dbt-adapter/issues/64), and the unsupported
+native v2 Flight SQL transport in [#51](https://github.com/redis/redis-dbt-adapter/issues/51).
