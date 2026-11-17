@@ -1,0 +1,25 @@
+{
+  "status": "passed",
+  "engine_commit": "3f285a37312c6ccab44a16b71d831c49e35417bd",
+  "engine_source_state": "merged-pinned",
+  "dbt_sha256": "3b3a969ba6f10513f5666de2ef279886688701e5fea5cd673e9ae4cf0281aa77",
+  "driver_commit": "3671fca7894240551d19aeb196d7b7362f8869d2",
+  "native_driver_sha256": "e503032de3f3634a27f7c29fcfecc4ec60d6f0600a22ba00c9803dc7473c1b6a",
+  "checks": {
+    "native-smoke": "passed",
+    "native-parity": "passed",
+    "server-build": "passed",
+    "security": "passed",
+    "smoke": "passed",
+    "parity-python-csv": "passed",
+    "rust-protocol": "passed",
+    "refusal": "passed",
+    "session-cancellation": "passed"
+  },
+  "logs": {
+    "runner-tests.log": "89df5010ed0e6fa2df4a460cef3c6ae23856e29a3b06f5a4c30910837df41ba8",
+    "native-smoke.log": "61cac42a3a7350727be10a4fd97c8c501347e6b3f5dbc0cc970397ad12240ae6",
+    "native-parity.log": "a3e48e99578c365ea91ba40805deea46bb451ecddb2057107bcad393a253761e",
+    "engine-build.log": "0bbbe6612187432099d07a25a414569b7f0be6f1ef775035e47cf0ef7388cfbf"
+  }
+}

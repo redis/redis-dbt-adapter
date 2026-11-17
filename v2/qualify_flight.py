@@ -58,6 +58,15 @@ def qualify(args):
         "dbt_sha256": digest(binary), "flight_client_sha256": digest(client), "checks": {},
     }
     patch = ROOT / "v2/engine/flight-sql.patch"
+    sources = json.loads((ROOT / "v2/upstream.json").read_text())
+    if evidence["engine_commit"] == sources["implementation_commit"]:
+        if subprocess.check_output(["git", "diff", "HEAD", "--name-only"], cwd=engine):
+            raise ValueError("Pinned engine must have no tracked source changes")
+        evidence["engine_source_state"] = "merged-pinned"
+    elif evidence["engine_commit"] == sources["flight_patch_base_commit"]:
+        evidence["engine_source_state"] = "historical-base-with-patch"
+    else:
+        raise ValueError("Engine HEAD must match the merged pin or historical patch base")
     subprocess.run(["git", "apply", "--reverse", "--check", str(patch)],
                    cwd=engine, check=True, capture_output=True)
     paths = re.findall(r"^\+\+\+ b/(.+)$", patch.read_text(), re.M)

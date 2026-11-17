@@ -1,13 +1,15 @@
 # Native Redis v2 validation
 
-The separate [Flight SQL candidate qualification](../docs/validation/issue51-2026-11-16.md)
-records current-source and stable-release local passes after the upstream Flight
-session fix, alongside the original failing evidence. It does not change the
-native engine pin or establish v2 Flight support.
+The [Flight SQL qualification](../docs/validation/issues70-71-2026-11-16.md)
+records macOS and Linux passes with latest driver main, deterministic publication
+refusals and same-session cancellation/resource probes, plus a separate stable/main
+Linux comparison. The integration pin now selects the merged Flight-enabled
+engine `3f285a37312c6ccab44a16b71d831c49e35417bd`; Redis and Flight remain
+experimental. Original failing evidence is preserved in the earlier records.
 
-## Current upstream candidate: November 16, 2026
+## Direct-Redis qualification: November 16, 2026
 
-The current [upstream.json](upstream.json) pins engine
+The direct-Redis qualification used engine
 `754f0a47164f86226dc568096ac56906ff9d2e69`, reconciled with upstream
 `de5f46bf8e58a7e6e635b6d15ebcd09482b56e2f` and submitted in
 [dbt-labs/dbt#17195](https://github.com/dbt-labs/dbt/pull/17195).
