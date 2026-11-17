@@ -83,7 +83,7 @@ def bootstrap_state(api, *, verified):
     try:
         return api.call('GET', 'bootstrap')['bootstrap_status']['state']
     except (ssl.SSLCertVerificationError, urllib.error.URLError) as error:
-        reason = getattr(error, 'reason', error)
+        reason = error.reason if isinstance(error, urllib.error.URLError) else error
         if verified and isinstance(reason, ssl.SSLCertVerificationError):
             raise RuntimeError(
                 'The owned Enterprise fixture no longer trusts its saved management CA. '

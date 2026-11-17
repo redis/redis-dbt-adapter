@@ -15,6 +15,7 @@ class StartupTests(unittest.TestCase):
         for wrapped in (False, True):
             with self.subTest(wrapped=wrapped):
                 failure = ssl.SSLCertVerificationError(1, 'untrusted certificate')
+                failure.reason = 'CERTIFICATE_VERIFY_FAILED'
                 if wrapped:
                     failure = urllib.error.URLError(failure)
                 api = Mock()
