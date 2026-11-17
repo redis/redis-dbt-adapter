@@ -80,8 +80,9 @@ registration, authentication, discovery, materializations, tests, or docs
 generation in an actual dbt run. Conversely, the finite dbt scenarios above do
 not establish every feature, platform, version, or deployment.
 
-Native limitations include autocommit without rollback and table-only Python
-models. Native SQL materialized views support creation, refresh, replacement,
+Native limitations include autocommit without rollback and in-process Python
+memory use. Python incremental models support append, delete+insert and merge;
+Python microbatch and enforced incremental contracts remain unsupported. Native SQL materialized views support creation, refresh, replacement,
 metadata/catalog discovery, and supported nonunique indexes; see the
 [materialized-view guide](../v1/README.md#materialized-views) and
 [versioned validation record](../v1/MATERIALIZED_VIEW_VALIDATION.md).

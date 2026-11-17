@@ -11,6 +11,7 @@ import hashlib
 import json
 import re
 import traceback
+from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Any, Dict, FrozenSet, List, Optional, Set, Tuple, Union
 
@@ -31,6 +32,7 @@ from dbt.adapters.base.relation import AdapterTrackingRelationInfo, InformationS
 from dbt.adapters.contracts.connection import AdapterResponse
 from dbt.adapters.contracts.relation import Policy, RelationType
 from dbt_common.contracts.constraints import ConstraintType
+from dbt_common.contracts.metadata import CatalogTable, ColumnMetadata, StatsItem, TableMetadata
 from dbt.adapters.redis_adbc.connections import RedisAdbcConnectionManager, RedisAdbcSession
 from dbt.adapters.sql import SQLAdapter
 
@@ -458,6 +460,42 @@ class RedisAdbcAdapter(SQLAdapter):
 
     def valid_incremental_strategies(self):
         return ["append", "delete+insert", "merge", "microbatch"]
+
+    @available
+    def validate_clone_state(self, state):
+        if state is not None:
+            root = Path(self.config.project_root)
+            if (root / state).resolve() == (root / self.config.target_path).resolve():
+                raise DbtRuntimeError(f"The state and target directories are the same: '{self.config.target_path}'")
+
+    def get_catalog_for_single_relation(self, relation: BaseRelation) -> Optional[CatalogTable]:
+        for cat in self._get_objects("columns", schema=relation.schema, table=relation.identifier):
+            if relation.database is not None and cat["catalog_name"] != relation.database:
+                continue
+            for schema in cat["catalog_db_schemas"] or []:
+                if schema["db_schema_name"] != relation.schema:
+                    continue
+                for table in schema["db_schema_tables"] or []:
+                    if table["table_name"] != relation.identifier:
+                        continue
+                    kind = table["table_type"]
+                    return CatalogTable(
+                        metadata=TableMetadata(
+                            database=cat["catalog_name"], schema=relation.schema,
+                            name=table["table_name"],
+                            type=kind if kind in ("VIEW", "MATERIALIZED VIEW") else "BASE TABLE",
+                            comment=self._table_comments(relation.schema).get(relation.identifier),
+                        ),
+                        columns={c["column_name"]: ColumnMetadata(
+                            name=c["column_name"], type=c["xdbc_type_name"],
+                            index=c["ordinal_position"], comment=c["remarks"],
+                        ) for c in sorted(table["table_columns"] or [], key=lambda c: c["ordinal_position"])},
+                        stats={"has_stats": StatsItem(
+                            id="has_stats", label="Has Stats?", value=False,
+                            description="Indicates whether there are statistics for this table", include=False,
+                        )},
+                    )
+        return None
 
     def _get_one_catalog(
         self,

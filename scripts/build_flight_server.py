@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build a committed Flight source with the latest stable Redis ADBC release.
 
+An explicit --driver-ref qualifies committed driver source instead.
 Requires git, gh, Go, and make. The source checkout is never modified; the resolved
 release, source revisions, module version, and binary digest are saved for QA.
 """
@@ -23,11 +24,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, required=True, help="Flight server Git checkout")
     parser.add_argument("--output", type=Path, required=True, help="destination executable")
+    parser.add_argument("--driver-ref", help="explicit driver commit/tag for source qualification (default: latest stable)")
     args = parser.parse_args()
     source = args.source.resolve()
     destination = args.output.resolve()
-    release = output("gh", "api", "repos/redis/redis-adbc-driver/releases/latest", "--jq", ".tag_name")
-    commit = output("gh", "api", f"repos/redis/redis-adbc-driver/commits/{release}", "--jq", ".sha")
+    release = None if args.driver_ref else output("gh", "api", "repos/redis/redis-adbc-driver/releases/latest", "--jq", ".tag_name")
+    driver_ref = args.driver_ref or release
+    commit = output("gh", "api", f"repos/redis/redis-adbc-driver/commits/{driver_ref}", "--jq", ".sha")
     server = output("git", "rev-parse", "HEAD", cwd=source)
     with tempfile.TemporaryDirectory(prefix="dbt-flight-build-") as directory:
         build = Path(directory)
@@ -43,7 +46,7 @@ def main():
             f"github.com/redis/redis-adbc-driver/go@{commit}",
         ], cwd=build, check=True)
         subprocess.run(["go", "mod", "tidy"], cwd=build, check=True)
-        subprocess.run(["make", "build", f"VERSION=issue40-{server[:12]}-adbc-{release}"],
+        subprocess.run(["make", "build", f"VERSION=dbt-{server[:12]}-adbc-{commit[:12]}"],
                        cwd=build, check=True)
         module = json.loads(output("go", "list", "-m", "-json",
                                   "github.com/adbc-drivers/redis/go", cwd=build))["Replace"]
@@ -53,6 +56,7 @@ def main():
     evidence = {
         "flight_source_commit": server,
         "redis_adbc_release": release,
+        "redis_adbc_requested_ref": driver_ref,
         "redis_adbc_commit": commit,
         "redis_adbc_go_module": module["Version"],
         "go_version": go_version,

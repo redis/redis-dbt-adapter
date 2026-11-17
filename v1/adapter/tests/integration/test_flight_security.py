@@ -90,3 +90,10 @@ def test_concurrent_sessions_recover_after_failed_statement(flight_config):
 
     with ThreadPoolExecutor(max_workers=4) as pool:
         list(pool.map(worker, range(4)))
+
+
+def test_plaintext_client_cannot_access_tls_listener(flight_config):
+    uri, options = flight_config
+    with pytest.raises(adbc.Error):
+        with connect(uri.replace('grpc+tls://', 'grpc://'), options) as connection:
+            query(connection, 'select 1')

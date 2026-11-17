@@ -28,9 +28,12 @@ class TestPythonModel(BasePythonModelTests):
         }
 
 
-@pytest.mark.skip(reason="Python models are tables only: dbt's incremental materialization runs SQL models only")
 class TestPythonIncremental(BasePythonIncrementalTests):
-    pass
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {"m_1.sql": suite.m_1, "incremental.py":
+                "import pyarrow.compute as pc\n" + suite.incremental_python.replace(
+                    "df.filter(df.id > 5)", 'df.filter(pc.greater(df["id"], 5))')}
 
 
 META_GET_PY = """
@@ -187,4 +190,82 @@ class TestPythonModelErrors:
         assert "ValueError: invalid literal for int() with base 10: 'no good'" in messages["raises"]
         assert "no_such_table_here" in messages["bad_sql"]
         assert "Database Error in model bad_sql" in output
-        assert "only supports languages ['sql']" in messages["incremental"]
+        assert "model() returned a builtins.NoneType" in messages["incremental"]
+
+
+class TestPythonIncrementalLifecycle:
+    @pytest.fixture(scope='class')
+    def seeds(self):
+        return {'input.csv': 'id,value\n1,one\n2,two\n'}
+
+    @pytest.fixture(scope='class')
+    def models(self):
+        return {'staged.py': self.code('merge')}
+
+    def code(self, strategy, policy='fail', extra=False):
+        return '''import pyarrow as pa
+import pyarrow.compute as pc
+
+def model(dbt, session):
+    dbt.config(materialized="incremental", incremental_strategy=STRATEGY,
+               unique_key="id", on_schema_change=POLICY, indexes=[{"columns": ["id"]}])
+    with session.cursor() as cursor:
+        cursor.execute(f"insert into {dbt.this.schema}.model_calls values (1)")
+    data = dbt.ref("input")
+    if dbt.is_incremental and STRATEGY == 'append':
+        with session.cursor() as cursor:
+            cursor.execute(f"select max(id) from {dbt.this}")
+            highest = cursor.fetchone()[0] or 0
+        data = data.filter(pc.greater(data['id'], highest))
+    EXTRA
+    return data.to_reader()
+'''.replace('STRATEGY', repr(strategy)).replace('POLICY', repr(policy)).replace('EXTRA',
+            "data = data.append_column('extra', pa.array([99] * data.num_rows, type=pa.int64()))" if extra else 'pass')
+
+    def initialize(self, project, strategy):
+        project.run_sql(f'drop table if exists {project.test_schema}.model_calls')
+        project.run_sql(f'create table {project.test_schema}.model_calls (n bigint)')
+        write_file(self.code(strategy), project.project_root, 'models', 'staged.py')
+        run_dbt(['seed', '--full-refresh'])
+        run_dbt(['run', '--full-refresh'])
+
+    def rows(self, project):
+        return project.run_sql(f'select id, value from {project.test_schema}.staged order by id', fetch='all')
+
+    @pytest.mark.parametrize('strategy', ['append', 'delete+insert', 'merge', 'default'])
+    def test_reader_incremental_reruns_and_full_refresh(self, project, strategy):
+        self.initialize(project, strategy)
+        assert self.rows(project) == [(1, 'one'), (2, 'two')]
+        project.run_sql(f"update {project.test_schema}.input set value='updated' where id=2")
+        project.run_sql(f"insert into {project.test_schema}.input values (3, 'three')")
+        run_dbt(['run', '-s', 'staged'])
+        expected = [(1, 'one'), (2, 'two' if strategy == 'append' else 'updated'), (3, 'three')]
+        assert self.rows(project) == expected
+        run_dbt(['run', '-s', 'staged'])
+        assert self.rows(project) == expected
+        run_dbt(['run', '-s', 'staged', '--full-refresh'])
+        assert self.rows(project) == [(1, 'one'), (2, 'updated'), (3, 'three')]
+        assert project.run_sql(f'select count(*) from {project.test_schema}.model_calls', fetch='one')[0] == 4
+        assert project.run_sql(f"select count(*) from pg_indexes where schemaname='{project.test_schema}' and tablename='staged' and indexname like 'dbt_idx_%'", fetch='one')[0] == 1
+
+    def test_failure_schema_policy_and_recovery(self, project):
+        self.initialize(project, 'merge')
+        before = self.rows(project)
+        write_file(self.code('merge').replace('    data = dbt.ref', '    raise ValueError("stop before ingest")\n    data = dbt.ref'), project.project_root, 'models', 'staged.py')
+        run_dbt(['run', '-s', 'staged', '--full-refresh'], expect_pass=False)
+        assert self.rows(project) == before
+        write_file(self.code('merge', extra=True), project.project_root, 'models', 'staged.py')
+        run_dbt(['run', '-s', 'staged'], expect_pass=False)
+        assert self.rows(project) == before
+        write_file(self.code('merge', 'append_new_columns', extra=True), project.project_root, 'models', 'staged.py')
+        run_dbt(['run', '-s', 'staged'])
+        assert project.run_sql(f'select distinct extra from {project.test_schema}.staged', fetch='all') == [(99,)]
+        write_file(self.code('bogus'), project.project_root, 'models', 'staged.py')
+        _, output = run_dbt_and_capture(['run', '-s', 'staged'], expect_pass=False)
+        assert 'unsupported strategy' in output
+        assert self.rows(project) == before
+        write_file(self.code('merge'), project.project_root, 'models', 'staged.py')
+        run_dbt(['run', '-s', 'staged', '--full-refresh'])
+        with get_connection(project.adapter):
+            schema = project.adapter.Relation.create(database=project.database, schema=project.test_schema)
+            assert not any(r.identifier.endswith(('__dbt_tmp', '__dbt_backup')) for r in project.adapter.list_relations_without_caching(schema))

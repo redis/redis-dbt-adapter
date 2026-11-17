@@ -14,6 +14,10 @@ on:
         required: true
         default: 4d91e37135080be7f0eeb770fc89fa7adeb14bc8
 
+      driver_ref:
+        description: Optional driver commit or tag for source qualification (default latest stable)
+        required: false
+
 permissions:
   contents: read
 
@@ -45,7 +49,8 @@ jobs:
       - name: Build Flight with the latest stable Redis driver
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/build_flight_server.py --source flight --output "$RUNNER_TEMP/dbt-flight-server"
+          DRIVER_REF: ${{ inputs.driver_ref }}
+        run: python3 scripts/build_flight_server.py --source flight --output "$RUNNER_TEMP/dbt-flight-server" --driver-ref "$DRIVER_REF"
       - name: Provision and verify Enterprise TLS, auth, Search and QPF 4x
         run: python3 scripts/redis_enterprise.py up --github-env
       - name: Install dbt and the qualified Flight client pair
@@ -85,6 +90,22 @@ jobs:
         env:
           REDIS_ADBC_TRANSPORT: flightsql
         run: env -u REDIS_ADBC_DRIVER .venv/bin/python -m pytest adapter/tests/functional -n 4 -q --tb=short --junitxml="$RUNNER_TEMP/flight-functional.xml"
+      - name: Require the Flight transport and security regressions to execute
+        run: |
+          python3 - <<'PYTEST'
+          import os
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          root = Path(os.environ["RUNNER_TEMP"])
+          for file, module, minimum in [
+              ("flight-functional.xml", "adapter.tests.functional.test_flight_sql.", 3),
+              ("flight-security.xml", "adapter.tests.integration.test_flight_security", 6),
+          ]:
+              cases = [case for case in ET.parse(root / file).iter("testcase")
+                       if case.get("classname", "").startswith(module)]
+              assert len(cases) >= minimum, f"Missing required cases in {file}"
+              assert all(case.find(tag) is None for case in cases for tag in ("skipped", "failure", "error")), f"Skipped or unsuccessful required cases in {file}"
+          PYTEST
       - name: Retain version provenance and test results
         if: always()
         uses: actions/upload-artifact@v7
