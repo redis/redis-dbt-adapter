@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dbt-redis-adbc"
-version = "0.1.0"
+version = "0.3.1"
 description = "dbt adapter for Redis 8.x using the Redis ADBC driver"
 readme = "README.md"
 authors = [{ name = "Albert T. Wong" }]
@@ -19,9 +19,15 @@ requires-python = ">=3.13"
 dependencies = [
     "dbt-core>=1.10,<2",
     "dbt-adapters>=1.16,<2",
+    # Security floor for dbt's trace-context parsing (CVE-2026-126360).
+    "opentelemetry-api>=1.45.2",
     "adbc-driver-manager>=1.6,<2",
     "pyarrow>=26,<27",
+    "sqlparse>=0.5,<1",
 ]
+
+[project.optional-dependencies]
+flightsql = ["adbc-driver-flightsql>=1.6,<2"]
 
 [project.urls]
 Homepage = "https://github.com/redis/redis-dbt-adapter"

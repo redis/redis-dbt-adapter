@@ -5,6 +5,9 @@
 Run the commands in this guide from `v1/` (`cd v1` from the repository root).
 The [repository overview](../README.md) describes the v1/v2 layout.
 
+To install the published adapter in your own project, start with the
+[installation and first-model guide](../docs/INSTALLATION.md).
+
 [![CI](https://github.com/redis/redis-dbt-adapter/actions/workflows/ci.yml/badge.svg)](https://github.com/redis/redis-dbt-adapter/actions/workflows/ci.yml)
 
 A dbt Core project that tests the dbt Redis adapter, which is built on the
@@ -42,7 +45,8 @@ dbt  ──►  dbt-redis-adbc (adapter/)  ──►  adbc_driver_manager  ─�
 
 ### Requirements
 
-You need Docker, [uv](https://docs.astral.sh/uv/) (it provides Python
+You need a dedicated Redis Enterprise cluster with TLS and username/password
+authentication, [uv](https://docs.astral.sh/uv/) (it provides Python
 3.13 for dbt), and network access to hub.getdbt.com for `dbt deps`.
 Building the driver from source also needs Go 1.26.6 or newer and a C
 toolchain; on macOS arm64 and Linux (x86-64, arm64) the prebuilt one is used.
@@ -52,21 +56,33 @@ when logged in, or through HTTPS without authentication.
 
 ### Set up the environment
 
+To provision a dedicated local Enterprise cluster, run
+`python3 scripts/redis_enterprise.py up` from the repository root, then
+`source .redis-enterprise/env.sh` and return to `v1/`. See the
+[environment guide](../scripts/README.md) for topology, TLS trust, and lifecycle.
+If using that generated environment, keep its connection variables instead of
+the placeholders below.
+
+Configure a dedicated test database with the Query Engine enabled, a certificate
+trusted by the test machine, and an ACL user allowed to create, read, update,
+and drop test data. Set credentials in the environment before running setup:
+
 ```bash
+export REDIS_URI=rediss://your-enterprise-endpoint:port/0
+export REDIS_USERNAME=your-test-user
+export REDIS_PASSWORD='<your-test-password>'
 make setup
 ```
 
-`make setup` does four things:
+`make setup` validates the authenticated TLS configuration, then:
 
 - runs `uv sync` and `dbt deps` (dbt_utils, and the local `redis_adbc_utils`)
-- puts the driver in `driver/`: the prebuilt library from the pinned
-  release (`v0.0.18`, in `scripts/driver-version`), after checking its SHA-256.
+- puts the driver in `driver/`: the prebuilt library from the latest
+  published release, after checking its SHA-256.
   Where the release has no build (another platform, or `DRIVER_VERSION` set
   to a commit) it builds the driver from source instead; `make driver-build`
   always does
 - downloads the CSV into `data/`
-- starts Redis **8.6.2** on port 6380, matching CI. [Redis Cloud](https://redis.io/docs/latest/operate/rc/databases/version-management/)
-  supports Redis 8.6 and may run a different patch release
 
 ### Build the project
 
@@ -98,18 +114,66 @@ January 2 alone, which replaces only that day:
 make microbatch-demo
 ```
 
+To see what an API reading the target sees when a batch fails, run this after
+`make all` (see [issue #42](https://github.com/redis/redis-dbt-adapter/issues/42)):
+
+```bash
+make microbatch-failure-demo
+```
+
+The failure demo copies the taxi microbatch model into a temporary project. It
+reads `taxi_intermediate.int_trips_enriched` and writes only a random
+`dbt_microbatch_failure_*` schema, which it drops on exit. For another input
+schema, use `ARGS="--source-schema your_intermediate_schema"`. It uses the
+connection environment variables below; it does not load a custom profile.
+Keep the source stable during the demo so recovery can be compared exactly.
+
+A separate dbt process backfills January 1–3. On the January 2 refresh, a
+demo-only client fault injector intercepts the generated DELETE/INSERT SQL,
+sends the actual DELETE, and pauses before sending INSERT. The reader keeps
+the same independent ADBC connection open and issues fresh queries during the
+interrupted refresh and at every checkpoint.
+After it observes the gap, the demo terminates the writer, then reruns just
+January 2 twice through dbt without fault injection or `--full-refresh`.
+There is no timing race to hit the interruption point, and production adapter
+macros and model SQL are unchanged.
+
+| Reader checkpoint | January 1 | January 2 | January 3 |
+| --- | --- | --- | --- |
+| Before refresh | Expected rows | Expected rows | Expected rows |
+| DELETE complete, writer paused | Unchanged | **No rows** | Unchanged |
+| Writer terminated | Unchanged | **Still no rows** | Unchanged |
+| Same batch rerun | Unchanged | Restored | Unchanged |
+| Same batch rerun again | Unchanged | Restored, no duplicates | Unchanged |
+
+The command prints observed per-day counts at each checkpoint and fails if any
+row or value differs from the expected source, if a `trip_id` is duplicated,
+or if a neighboring day's rows change. CI runs it against the loaded taxi data.
+The table describes the deliberately paused statement boundary; reads during
+an actively executing DELETE or INSERT may also see partial progress. This
+demo does not assert statement-level atomicity.
+
+For an API, a refresh can therefore return a successful but incomplete query
+result. Autocommit leaves the missing day visible until recovery; terminating
+the writer does not roll it back. Rerunning the same window replaces its rows,
+which also removes partial inserts before reloading. If an API requires a
+complete published dataset throughout refresh, build and validate a separate
+version and have the application switch its active version only after success.
+Retain the previous version for existing readers; this demo does not establish
+an atomic SQL rename/swap guarantee.
+
 Use `make docs-serve` to browse the docs and lineage graph.
 
 ### Configure the connection
 
-Redis is published on **6380** so it doesn't collide with a local Redis on
-6379. Override the connection with `REDIS_URI` (for example
-`rediss://host:port/0` for Redis Cloud), credentials with `REDIS_USERNAME` and
-`REDIS_PASSWORD`, the session time zone with `REDIS_TIME_ZONE` (UTC by
-default), and the driver location with `REDIS_ADBC_DRIVER`. A password
-in `REDIS_URI` works too; `dbt debug` and the logs show it as `****`. Redis
-Flex (RAM + SSD) databases aren't supported: their Search lacks features every
-table needs, so the driver refuses them when it connects.
+All integration testing uses a dedicated Redis Enterprise cluster with TLS.
+`REDIS_URI` must use `rediss://host:port/0`, and `REDIS_USERNAME` and
+`REDIS_PASSWORD` must both be set. There is no local container fallback.
+Keep certificate verification enabled. For a private CA, set
+`REDIS_TLS_CA_FILE` to its PEM bundle; the profile passes it through the
+driver's `adbc.redis.tls_ca_file` option on macOS and Linux. Set `REDIS_TIME_ZONE` for the session time
+zone (UTC by default) and `REDIS_ADBC_DRIVER` for the driver location.
+Redis Flex (RAM + SSD) databases aren't supported.
 
 ## Project guide
 
@@ -137,7 +201,12 @@ data, which staging filters out.
 ### Continuous integration
 
 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs on every pull
-request and push to `main`, against Redis 8.6.2 and the pinned driver:
+request and push to `main`, against a Redis Enterprise test cluster and the
+latest released driver. Each integration job provisions its own three-shard Enterprise
+cluster with Search, TLS, a generated private CA, and a named database user.
+The setup masks the generated password and exports the connection settings
+through `GITHUB_ENV`; no preconfigured database secrets are needed. Jobs run
+against isolated databases, including each taxi dependency matrix entry. CI runs:
 
 - `make all`, failing on any error and unless the build gives exactly
   `PASS=82 WARN=1`
@@ -154,9 +223,9 @@ CI also runs [dbt's adapter test suite](#dbts-adapter-test-suite) on Python
 3.13, with the locked versions only: dbt-tests-adapter needs newer
 dbt packages than the oldest ones.
 
-Nightly, all of it runs against the driver's latest release, so a driver change
-that breaks the project shows up before the pin is bumped. To test another
-release or a driver commit, run the workflow by hand with `driver_version`.
+Every CI run, including pull requests, nightly builds and release validation,
+resolves the driver's latest published release. Run the workflow by hand to
+repeat validation against the current release.
 
 CI also audits the locked Python runtime and test dependencies and the optional
 v2 Python runtime with `pip-audit`. The current runtime uses PyArrow 26 and the
@@ -200,14 +269,14 @@ not the adapter. For example:
 - relations render as `schema.table`.
 
 Skipped, with the reason in the test:
-- grants and materialized views
+- general SQL privileges and materialized views
 - zero-copy `dbt clone` (dbt clone creates views)
 - arrays
 - incremental Python models (Python models are tables)
 - backslash escapes (standard SQL strings, as dbt-postgres skips)
 - `get_catalog_for_single_relation`, which dbt-core never calls
 
-The pinned driver supports all snapshot tests, including `dbt_valid_to_current`
+The latest released driver supports all snapshot tests, including `dbt_valid_to_current`
 with `date(x)`; these run as ordinary tests so regressions fail CI.
 
 ## Repository reference
@@ -267,7 +336,7 @@ materializations, so the adapter covers what isn't SQL:
 | Connection | `adbc_driver_manager` DB-API, autocommit. The driver has no transactions: it accepts dbt's `BEGIN`/`COMMIT` as no-ops, and a `SET LOCAL` lasts until the model's `COMMIT`, as on Postgres. Results over 65,536 rows stream from the driver, so an error in a later batch is raised as dbt reads the rows; the adapter reports it as a database error, like one from the query. Ctrl-C and `--fail-fast` cancel the running statements and streamed results (ADBC `StatementCancel`); each fails with `CANCELLED`, which the adapter reports as a runtime error rather than a database error |
 | Metadata | Relations, columns and the docs catalog come from ADBC `GetObjects`; table comments come from `information_schema.tables`. Relations are matched with their case, since the driver keeps schema and table names as written (`alias='MyTable'` works). Column types are parsed as dbt-postgres reports them (`numeric` with precision and scale, `character varying` with its length) |
 | `persist_docs` | Descriptions are stored with `COMMENT ON TABLE` / `VIEW` / `COLUMN`; the marts turn it on |
-| `grants` | Skipped with a warning (see [Known limitations](#known-limitations)) |
+| `grants` | Native SELECT grants use dedicated Redis Software ACLs when `adbc.redis.rbac` is configured; otherwise skipped with a warning. See [setup](#sql-grants-through-dedicated-redis-software-acls). |
 | Temporary tables | `make_temp_relation` renders them unqualified (a schema-qualified name always means a permanent table), and their columns are looked up under `pg_temp` |
 | Incremental strategies | `append`, `delete+insert` (the default with a `unique_key`), `merge`, and `microbatch` (each batch replaces its `event_time` window; batches can run in parallel) |
 | Seed reloads | A reload without `--full-refresh` checks the CSV's columns before truncating, so a mismatch leaves the table as it was (there's no transaction to roll the `TRUNCATE` back) |
@@ -299,6 +368,13 @@ extension, the adapter adds `.dylib`, `.so` or `.dll`), `uri`, `username`,
 `aggregate_pushdown` (`exact` / `all` / `none`), `rename_rekey` (see
 [Looking at the data in Redis](#looking-at-the-data-in-redis)), and:
 
+- `transport`: `redis` (default) loads Redis ADBC directly; `flightsql` loads
+  the ADBC Flight SQL client and connects to a Redis-backed Flight server.
+  Install `dbt-redis-adbc[flightsql]`, use a `grpc://` or `grpc+tls://` URI,
+  and enable server sessions. Schema and time zone are set per session;
+  Redis-specific options must be configured on the server. See the
+  [Flight SQL profile](adapter/README.md#flight-sql).
+
 - `time_zone`: the session time zone, for example `America/New_York` (UTC
   by default). `current_timestamp` shows in it, `localtimestamp` and
   snapshots' `dbt_valid_from` / `dbt_valid_to` are its local time, and
@@ -316,7 +392,7 @@ extension, the adapter adds `.dylib`, `.so` or `.dll`), `uri`, `username`,
   profile key of their own (`adbc.redis.time_zone`, `password`, …) must be
   set with it.
 
-`dbt debug` shows these options. A profile key the adapter doesn't know is
+`dbt debug` shows these options with driver option values redacted. A profile key the adapter doesn't know is
 ignored with a warning.
 
 ## Compatibility and limitations
@@ -325,7 +401,7 @@ ignored with a warning.
 
 Building this project turned up these issues, all filed on
 [redis/redis-adbc-driver](https://github.com/redis/redis-adbc-driver/issues).
-All of them are fixed in the pinned driver, v0.0.18.
+All of them were fixed by driver v0.0.18 and remain covered on the latest release.
 
 | Issue | Fixed in |
 |-|-|
@@ -405,6 +481,10 @@ the dbt features above all work. These limits come from the design:
   for arrives. A statement that was writing keeps the rows it already
   wrote until the next run drops its relation. A cancelled `rename_rekey`
   rename leaves the table as it was.
+  For microbatch, stopping after DELETE leaves that window missing from the
+  live target until the same batch is rerun; there is no rollback. Run
+  `make microbatch-failure-demo` to observe this with an independent reader
+  and verify recovery without duplicates.
 - **Python models are tables, and run in the dbt process.** Each ref a
   Python model reads is loaded whole into dbt's memory. Python models can't
   be incremental: dbt's incremental materialization runs only SQL models,
@@ -412,9 +492,11 @@ the dbt features above all work. These limits come from the design:
   so neither works on any adapter.
 - **No materialized views.** `materialized='materialized_view'` stops with
   a clear error.
-- **No grants.** Redis controls access per user with ACLs (key patterns and
-  commands), not SQL privileges on tables, so a `grants` config is skipped
-  with a warning.
+- **Limited grants.** Opt-in native SELECT grants require a driver with enforced
+  RBAC support and provisioned dedicated Redis Software ACLs. Other privileges,
+  view grants and Flight SQL grants are unsupported. Without configuration,
+  grants retain the historical skip-with-warning behavior.
+
 
 ## Redis operations
 
@@ -435,11 +517,11 @@ Each row is a HASH, and each table has a RediSearch index. On a cluster, add
 `-c` to `redis-cli` so it follows the key to its shard:
 
 ```bash
-docker exec redis-dbt-taxi redis-cli HGETALL raw:yellow_tripdata:1
+REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli --tls -u "$REDIS_URI" --user "$REDIS_USERNAME" HGETALL raw:yellow_tripdata:1
 ```
 
 ```bash
-docker exec redis-dbt-taxi redis-cli FT.INFO idx:raw:yellow_tripdata
+REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli --tls -u "$REDIS_URI" --user "$REDIS_USERNAME" FT.INFO idx:raw:yellow_tripdata
 ```
 
 Tables built by dbt's rename-swap keep the row key prefix and index of the
@@ -458,7 +540,7 @@ table instead of moving it to `__dbt_backup` first.
 Either way, a table's current prefix and index are in its metadata:
 
 ```bash
-docker exec redis-dbt-taxi redis-cli GET 'adbc:{meta}:table:taxi_marts:agg_daily_revenue'
+REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli --tls -u "$REDIS_URI" --user "$REDIS_USERNAME" GET 'adbc:{meta}:table:taxi_marts:agg_daily_revenue'
 ```
 
 The metadata also holds the comments `persist_docs` writes. They're easier to
@@ -471,7 +553,7 @@ uv run dbt show --inline "select table_name, comment from information_schema.tab
 To watch the `FT.AGGREGATE` / `HMGET` traffic while dbt runs:
 
 ```bash
-docker exec -it redis-dbt-taxi redis-cli MONITOR
+REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli --tls -u "$REDIS_URI" --user "$REDIS_USERNAME" MONITOR
 ```
 
 ## Data source
@@ -480,3 +562,51 @@ NYC TLC yellow taxi trip records for January 2019, as CSV, from the
 [DataTalksClub mirror](https://github.com/DataTalksClub/nyc-tlc-data). The TLC
 itself now publishes only Parquet. Zone lookup:
 [TLC taxi zones](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
+
+
+## SQL grants through dedicated Redis Software ACLs
+
+Use a native Redis ADBC driver that supports `adbc.redis.rbac` and follow its
+[dedicated ACL provisioning and recovery guide](https://github.com/redis/redis-adbc-driver/blob/main/docs/sql-rbac.md).
+Users of a bound role must have a single Redis role; mixed-role users are
+rejected by the initial driver mapping. Roles and users are provisioned by an
+administrator. This adapter never changes
+role membership. Provide the write-only management JSON through a secret profile
+value; do not commit management credentials:
+
+```yaml
+driver_options:
+  adbc.redis.rbac: "{{ env_var('DBT_ENV_SECRET_REDIS_RBAC') }}"
+```
+
+A table or incremental model can then use:
+
+```sql
+{{ config(materialized='incremental', grants={'select': ['analyst']}) }}
+select 42 as id
+```
+
+Each grantee is quoted and sent in a separate statement. Existing grants are
+read from `information_schema.role_table_grants` and compared with the model's
+configuration; an unchanged incremental run sends no redundant grant.
+Set `grants={'select': []}` on an existing incremental model to revoke managed
+SELECT grants. An absent/empty grants configuration follows dbt's normal no-op
+behavior. Unsupported privileges fail explicitly when RBAC is enabled. Base
+tables only; the driver rejects views, `PUBLIC`, grant options and other object
+kinds. Without `adbc.redis.rbac`, the adapter continues to warn and skip grants.
+Flight SQL does not enable this native management path.
+
+The driver manages only its dedicated ACL contribution. Other roles/ACLs may
+still permit reads after revoke. Enforcement propagation, prefix-changing DDL,
+metadata visibility, interrupted-write locks and recovery follow the driver's
+contract. Grants do not make dbt writes transactional.
+
+An opt-in end-to-end test is in
+`adapter/tests/integration/test_rbac_grants.py`. In an isolated Software database,
+provision the dedicated role/ACL/reader first and set `REDIS_URI`,
+`REDIS_ADBC_DRIVER`, `SSL_CERT_FILE`, `REDIS_RBAC_TEST_CONFIG` (management JSON),
+`REDIS_RBAC_TEST_ROLE`, and `REDIS_RBAC_TEST_READER_URI`. Run it sequentially:
+
+```sh
+python -m pytest adapter/tests/integration/test_rbac_grants.py -q
+```

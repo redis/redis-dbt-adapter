@@ -10,7 +10,7 @@ from dbt.tests.adapter.grants.test_snapshot_grants import BaseSnapshotGrants
 from dbt.tests.adapter.materialized_view.basic import MaterializedViewBasic
 from dbt.tests.adapter.materialized_view.changes import MaterializedViewChanges
 
-NO_GRANTS = pytest.mark.skip(reason="Redis controls access with ACLs, not GRANT; the adapter skips grants with a warning")
+NO_GRANTS = pytest.mark.skip(reason="General grants suite requires unsupported privileges/objects; opt-in native SELECT RBAC has a separate integration test")
 NO_MATERIALIZED_VIEWS = pytest.mark.skip(reason="Redis has no materialized views")
 
 

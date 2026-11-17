@@ -15,7 +15,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DRIVER_GH_REPO="${DRIVER_GH_REPO:-redis/redis-adbc-driver}"
 DRIVER_RELEASES="${DRIVER_RELEASES:-}"
-DRIVER_VERSION="${DRIVER_VERSION:-$(cat "${ROOT}/scripts/driver-version")}"
+DRIVER_VERSION="$(bash "${ROOT}/scripts/resolve_driver_version.sh")"
+export DRIVER_VERSION
 
 build_instead() {
   echo "$1; building it from source instead." >&2

@@ -6,11 +6,13 @@ nyc_taxi:
       # Put there by `make driver`. Without an extension, the adapter adds the
       # platform's (.dylib on macOS, .so on Linux, .dll on Windows).
       driver: "{{ env_var('REDIS_ADBC_DRIVER', 'driver/libadbc_driver_redis') }}"
-      uri: "{{ env_var('REDIS_URI', 'redis://localhost:6380/0') }}"
+      uri: "{{ env_var('REDIS_URI') }}"
       # Credentials here rather than in REDIS_URI, so they never show up in
-      # dbt debug or the logs. Empty means none.
-      username: "{{ env_var('REDIS_USERNAME', '') }}"
-      password: "{{ env_var('REDIS_PASSWORD', '') }}"
+      # dbt debug or the logs. Both are required.
+      username: "{{ env_var('REDIS_USERNAME') }}"
+      driver_options:
+        adbc.redis.tls_ca_file: "{{ env_var('REDIS_TLS_CA_FILE', '') }}"
+      password: "{{ env_var('REDIS_PASSWORD') }}"
       # The session time zone, e.g. America/New_York. Empty means UTC.
       time_zone: "{{ env_var('REDIS_TIME_ZONE', '') }}"
       database: redis

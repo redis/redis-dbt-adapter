@@ -17,6 +17,10 @@ import tempfile
 import uuid
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+from integration_config import require_integration_config
+
+
 PROJECT = "redis_dbt_v2_smoke"
 REQUIRED_RESULTS = {
     f"seed.{PROJECT}.trips",
@@ -64,11 +68,18 @@ def check_results(path):
 
 
 def run_smoke(binary, *, build=False):
+    if build:
+        require_integration_config()
     version = subprocess.run([binary, "--version"], capture_output=True, text=True, check=True)
     check_version(version.stdout + version.stderr)
     print(version.stdout.strip(), flush=True)
 
     env = os.environ.copy()
+    if not build:
+        # Profile rendering still needs values; parse never opens a connection.
+        env.setdefault("REDIS_URI", "rediss://parse-only.invalid:6380/0")
+        env.setdefault("REDIS_USERNAME", "parse-only")
+        env.setdefault("REDIS_PASSWORD", "parse-only")
     # Never accept an externally supplied schema: cleanup must only drop ours.
     env["REDIS_DBT_V2_SCHEMA"] = "dbt_v2_smoke_" + uuid.uuid4().hex[:12]
     env["DBT_ALLOW_EXPERIMENTAL_ADAPTERS"] = "yes"
@@ -124,7 +135,7 @@ def main():
         parser.error(f"Executable not found: {args.dbt}")
     try:
         run_smoke(binary, build=args.build)
-    except (OSError, SmokeError, subprocess.CalledProcessError) as exc:
+    except (OSError, ValueError, SmokeError, subprocess.CalledProcessError) as exc:
         print(f"Redis v2 smoke check failed: {exc}", file=sys.stderr)
         return 1
     return 0
