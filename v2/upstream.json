@@ -1,11 +1,11 @@
 {
   "upstream": "https://github.com/dbt-labs/dbt",
   "fork": "https://github.com/alberttwong/dbt",
-  "baseline_commit": "4bb4caa4ae1e7f4354c7817093a55514c6cbea41",
-  "tracking_issue": "https://github.com/redis/redis-dbt-adapter/issues/27",
-  "implementation_branch": "codex/redis-feature-parity",
-  "implementation_commit": "90178580bd6f3353d758fff770fdc2c58c985ad0",
+  "baseline_commit": "de5f46bf8e58a7e6e635b6d15ebcd09482b56e2f",
+  "tracking_issue": "https://github.com/redis/redis-dbt-adapter/issues/40",
+  "implementation_branch": "codex/redis-adbc-upstream",
+  "implementation_commit": "754f0a47164f86226dc568096ac56906ff9d2e69",
   "connection_pull_request": "https://github.com/alberttwong/dbt/pull/1",
   "driver_version": "latest",
-  "implementation_pull_request": "https://github.com/alberttwong/dbt/pull/3"
+  "implementation_pull_request": "https://github.com/dbt-labs/dbt/pull/17195"
 }

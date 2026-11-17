@@ -120,8 +120,10 @@ versions, workflow coverage, and deployment limits.
   catalog publication up to nineteen times with backoff. Scripts execute one statement
   at a time so committed statements are not replayed. Arrow record batch readers
   are captured once in a temporary disk file to supply fresh input on retry. Bound
-  SQL input, unknown stream types, Flight SQL, and unknown publication outcomes
-  are not automatically replayed.
+  SQL input, unknown stream types, and unknown publication outcomes are not
+  automatically replayed. Flight SQL retries only the server's explicit
+  refused-publication error, with its status, vendor code, and SQLSTATE marker;
+  generic transport failures are not replayed.
 - No materialized views. Native SELECT grants can opt into dedicated Redis Software ACLs; see [SQL grants](../README.md#sql-grants-through-dedicated-redis-software-acls).
 - Python models run in the dbt process and load their inputs into its memory;
   incremental Python models are not supported

@@ -1,0 +1,97 @@
+name: Authenticated Flight SQL qualification
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/flight-sql.yml
+      - scripts/build_flight_server.py
+      - scripts/redis_enterprise.py
+      - v1/adapter/**
+  workflow_dispatch:
+    inputs:
+      flight_ref:
+        description: Public Flight server source commit or tag
+        required: true
+        default: 4d91e37135080be7f0eeb770fc89fa7adeb14bc8
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GOFLAGS: -p=2
+      FLIGHT_SQL_URI: grpc+tls://localhost:18841
+      DBT_SEND_ANONYMOUS_USAGE_STATS: "false"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v7
+        with:
+          repository: redis/redis-apache-arrow-flight
+          ref: ${{ inputs.flight_ref || '4d91e37135080be7f0eeb770fc89fa7adeb14bc8' }}
+          path: flight
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: flight/go.mod
+          cache-dependency-path: flight/go.sum
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          python-version: "3.13"
+      - name: Build Flight with the latest stable Redis driver
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/build_flight_server.py --source flight --output "$RUNNER_TEMP/dbt-flight-server"
+      - name: Provision and verify Enterprise TLS, auth, Search and QPF 4x
+        run: python3 scripts/redis_enterprise.py up --github-env
+      - name: Install dbt and the qualified Flight client pair
+        working-directory: v1
+        run: |
+          uv sync --locked
+          uv pip install adbc-driver-flightsql==1.13.0 adbc-driver-manager==1.13.0
+      - name: Start the authenticated TLS Flight server
+        run: |
+          export FLIGHT_LISTEN=127.0.0.1:18841 FLIGHT_AUTH=redis-acl
+          export FLIGHT_TLS_CERT="$PWD/.redis-enterprise/server.crt"
+          export FLIGHT_TLS_KEY="$PWD/.redis-enterprise/server.key"
+          "$RUNNER_TEMP/dbt-flight-server" --adbc-option "adbc.redis.tls_ca_file=$REDIS_TLS_CA_FILE" > "$RUNNER_TEMP/dbt-flight-server.log" 2>&1 &
+          python3 - <<'PY'
+          import os, socket, time
+          for attempt in range(100):
+              try:
+                  with socket.create_connection(("127.0.0.1", 18841), timeout=1):
+                      break
+              except OSError:
+                  time.sleep(.1)
+          else:
+              raise SystemExit("Flight listener did not start")
+          with open(os.environ["GITHUB_ENV"], "a") as output:
+              for target, source in [("FLIGHT_SQL_USERNAME", "REDIS_USERNAME"),
+                                     ("FLIGHT_SQL_PASSWORD", "REDIS_PASSWORD"),
+                                     ("FLIGHT_SQL_TLS_CA_FILE", "REDIS_TLS_CA_FILE")]:
+                  output.write(f"{target}={os.environ[source]}\n")
+          PY
+      - name: Verify Flight TLS, credentials and isolated concurrent sessions
+        working-directory: v1
+        env:
+          FLIGHT_SQL_SECURITY_TESTS: "1"
+        run: .venv/bin/python -m pytest adapter/tests/integration/test_flight_security.py -q --tb=short --junitxml="$RUNNER_TEMP/flight-security.xml"
+      - name: Run all dbt adapter workflows through Flight SQL
+        working-directory: v1
+        env:
+          REDIS_ADBC_TRANSPORT: flightsql
+        run: env -u REDIS_ADBC_DRIVER .venv/bin/python -m pytest adapter/tests/functional -n 4 -q --tb=short --junitxml="$RUNNER_TEMP/flight-functional.xml"
+      - name: Retain version provenance and test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: flight-qualification
+          path: |
+            ${{ runner.temp }}/dbt-flight-server.json
+            ${{ runner.temp }}/flight-security.xml
+            ${{ runner.temp }}/flight-functional.xml
+          if-no-files-found: warn

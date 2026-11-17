@@ -9,6 +9,7 @@ redis_dbt_v2_smoke:
       username: "{{ env_var('REDIS_USERNAME') }}"
       driver_options:
         adbc.redis.tls_ca_file: "{{ env_var('REDIS_TLS_CA_FILE', '') }}"
+        adbc.redis.stream_results: true
       password: "{{ env_var('REDIS_PASSWORD') }}"
       database: redis
       schema: "{{ env_var('REDIS_DBT_V2_SCHEMA') }}"
@@ -17,5 +18,3 @@ redis_dbt_v2_smoke:
       rename_rekey: false
       read_timeout: 30
       write_timeout: "30s"
-      driver_options:
-        adbc.redis.stream_results: true

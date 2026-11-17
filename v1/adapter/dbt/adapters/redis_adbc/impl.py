@@ -17,6 +17,7 @@ import agate
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.csv as pacsv
+import sqlparse
 from dbt_common.clients.agate_helper import table_from_rows
 from dbt_common.exceptions import DbtRuntimeError
 
@@ -207,12 +208,45 @@ class RedisAdbcAdapter(SQLAdapter):
     def _adbc(self):
         return self.connections.get_thread_connection().handle.conn
 
+    def debug_query(self) -> None:
+        # Finish the probe's Flight stream before closing its statement.
+        self.execute("select 1 as id", fetch=True)
+
+    def _flight_query_schema(self, sql: str) -> pa.Schema:
+        # Contract queries may prepend sql_header statements. Preserve their
+        # session effects before asking for the final SELECT's schema.
+        statements = sqlparse.split(sql)
+        with self.connections.exception_handler(sql):
+            handle = self.connections.get_thread_connection().handle
+            with handle.cursor() as cursor:
+                for statement in statements[:-1]:
+                    cursor.execute(statement)
+                    cursor.fetchall()
+                return cursor.adbc_execute_schema(statements[-1] if statements else sql)
+
+    @available.parse(lambda *a, **k: [])
+    def get_column_schema_from_query(self, sql: str) -> List[Column]:
+        if self.config.credentials.transport == "flightsql":
+            # Schema discovery must not open a result stream: cancelling it
+            # races the next RPC while the server releases its session lock.
+            schema = self._flight_query_schema(sql)
+            return [self.Column.create(field.name, self.connections.data_type_code_to_name(field.type))
+                    for field in schema]
+        _, cursor = self.connections.add_select_query(sql)
+        try:
+            return [
+                self.Column.create(name, self.connections.data_type_code_to_name(dtype))
+                for name, dtype, *_ in cursor.description
+            ]
+        finally:
+            cursor.close()
+
     def _get_objects(self, depth: str, schema: Optional[str] = None, table: Optional[str] = None) -> List[dict]:
         with self.connections.exception_handler("GetObjects"):
-            reader = self._adbc().adbc_get_objects(
+            with self._adbc().adbc_get_objects(
                 depth=depth, db_schema_filter=schema, table_name_filter=table
-            )
-            objects = reader.read_all().to_pylist()
+            ) as reader:
+                objects = reader.read_all().to_pylist()
             if self.config.credentials.transport == "flightsql" and depth == "columns":
                 # Flight GetObjects reconstructs columns from Arrow schemas;
                 # it omits Redis SQL type names/precision and column comments.
@@ -461,8 +495,15 @@ class RedisAdbcAdapter(SQLAdapter):
         # The driver's Arrow type for each SQL type, from a query that reads
         # no rows. pyarrow parses the CSV into those.
         casts = ", ".join(f"cast(null as {t}) as {self.quote(name)}" for name, t in column_types.items())
-        _, cursor = self.connections.add_select_query(f"select {casts} where false")
-        schema = {d[0]: d[1] for d in cursor.description}
+        query = f"select {casts} where false"
+        if self.config.credentials.transport == "flightsql":
+            schema = {field.name: field.type for field in self._flight_query_schema(query)}
+        else:
+            _, cursor = self.connections.add_select_query(query)
+            try:
+                schema = {d[0]: d[1] for d in cursor.description}
+            finally:
+                cursor.close()
         reader = pacsv.open_csv(
             path,
             convert_options=pacsv.ConvertOptions(
