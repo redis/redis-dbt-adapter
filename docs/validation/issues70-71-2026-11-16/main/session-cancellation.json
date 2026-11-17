@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "client": "Python ADBC Flight SQL",
+  "checks": {
+    "observed_active_leases": 1,
+    "cancel_status": "Flight Canceled",
+    "cancel_seconds": 0.000563207984669134,
+    "time_zone": "America/New_York",
+    "temporary_value": 42,
+    "remaining_active_leases": 0
+  }
+}

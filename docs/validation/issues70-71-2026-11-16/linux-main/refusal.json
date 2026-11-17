@@ -1,0 +1,304 @@
+{
+  "status": "passed",
+  "checks": {
+    "native_retry": {
+      "workspaces": [
+        {
+          "calls": 9,
+          "first_seconds": 1.4528547059999255
+        }
+      ],
+      "refused_cas": 9,
+      "passed_publications": 1
+    },
+    "native_20_attempt_bound": {
+      "workspaces": [
+        {
+          "calls": 9,
+          "first_seconds": 1.4559961590000512
+        },
+        {
+          "calls": 9,
+          "first_seconds": 5.22590867100007
+        },
+        {
+          "calls": 9,
+          "first_seconds": 9.045157098000118
+        },
+        {
+          "calls": 9,
+          "first_seconds": 12.977820559000065
+        },
+        {
+          "calls": 9,
+          "first_seconds": 17.111122957000134
+        },
+        {
+          "calls": 9,
+          "first_seconds": 21.636562185000003
+        },
+        {
+          "calls": 9,
+          "first_seconds": 26.16919684200002
+        },
+        {
+          "calls": 9,
+          "first_seconds": 30.69229895500007
+        },
+        {
+          "calls": 9,
+          "first_seconds": 35.21119166900007
+        },
+        {
+          "calls": 9,
+          "first_seconds": 39.73261248500012
+        },
+        {
+          "calls": 9,
+          "first_seconds": 44.25333086799992
+        },
+        {
+          "calls": 9,
+          "first_seconds": 48.80036403999998
+        },
+        {
+          "calls": 9,
+          "first_seconds": 53.31590783599995
+        },
+        {
+          "calls": 9,
+          "first_seconds": 57.82483256599994
+        },
+        {
+          "calls": 9,
+          "first_seconds": 62.334882431000096
+        },
+        {
+          "calls": 9,
+          "first_seconds": 66.84253400300008
+        },
+        {
+          "calls": 9,
+          "first_seconds": 71.34461685299993
+        },
+        {
+          "calls": 9,
+          "first_seconds": 75.84948528600012
+        },
+        {
+          "calls": 9,
+          "first_seconds": 80.35266485600005
+        },
+        {
+          "calls": 9,
+          "first_seconds": 84.85857873400005
+        }
+      ],
+      "refused_cas": 180,
+      "passed_publications": 0
+    },
+    "native_statement_boundary": {
+      "workspaces": [
+        {
+          "calls": 9,
+          "first_seconds": 1.4703263500000503
+        },
+        {
+          "calls": 9,
+          "first_seconds": 4.484533579000072
+        },
+        {
+          "calls": 9,
+          "first_seconds": 7.547465068000065
+        },
+        {
+          "calls": 9,
+          "first_seconds": 10.706232484000111
+        },
+        {
+          "calls": 9,
+          "first_seconds": 14.06640762500001
+        },
+        {
+          "calls": 9,
+          "first_seconds": 17.829263615000173
+        },
+        {
+          "calls": 9,
+          "first_seconds": 21.593362436000007
+        },
+        {
+          "calls": 9,
+          "first_seconds": 25.35728565600016
+        },
+        {
+          "calls": 9,
+          "first_seconds": 29.131376415000204
+        },
+        {
+          "calls": 9,
+          "first_seconds": 32.90020026900015
+        },
+        {
+          "calls": 9,
+          "first_seconds": 36.667382320000115
+        },
+        {
+          "calls": 9,
+          "first_seconds": 40.43346542500012
+        },
+        {
+          "calls": 9,
+          "first_seconds": 44.19526799000005
+        },
+        {
+          "calls": 9,
+          "first_seconds": 47.96043512000006
+        },
+        {
+          "calls": 9,
+          "first_seconds": 51.72331642800009
+        },
+        {
+          "calls": 9,
+          "first_seconds": 55.48844538800017
+        },
+        {
+          "calls": 9,
+          "first_seconds": 59.250355949000095
+        },
+        {
+          "calls": 9,
+          "first_seconds": 63.01528574000008
+        },
+        {
+          "calls": 9,
+          "first_seconds": 66.78029759800006
+        },
+        {
+          "calls": 9,
+          "first_seconds": 70.54626145800012
+        }
+      ],
+      "refused_cas": 180,
+      "passed_publications": 0
+    },
+    "arrow_empty_fresh_reader": {
+      "workspaces": [
+        {
+          "calls": 9,
+          "first_seconds": 0.5494952290000583
+        }
+      ],
+      "refused_cas": 9,
+      "passed_publications": 1
+    },
+    "arrow_nonempty_fresh_input": {
+      "workspaces": [
+        {
+          "calls": 9,
+          "first_seconds": 0.4227300439999908
+        }
+      ],
+      "refused_cas": 9,
+      "passed_publications": 1
+    },
+    "arrow_20_attempt_bound": {
+      "workspaces": [
+        {
+          "calls": 9,
+          "first_seconds": 0.2570683960000224
+        },
+        {
+          "calls": 9,
+          "first_seconds": 5.177239637999946
+        },
+        {
+          "calls": 9,
+          "first_seconds": 10.21917300600012
+        },
+        {
+          "calls": 9,
+          "first_seconds": 15.306090802999961
+        },
+        {
+          "calls": 9,
+          "first_seconds": 20.887353821000033
+        },
+        {
+          "calls": 9,
+          "first_seconds": 26.647141607000094
+        },
+        {
+          "calls": 9,
+          "first_seconds": 32.50394131999997
+        },
+        {
+          "calls": 9,
+          "first_seconds": 38.444039441000086
+        },
+        {
+          "calls": 9,
+          "first_seconds": 44.926140728000064
+        },
+        {
+          "calls": 9,
+          "first_seconds": 50.80044045599993
+        },
+        {
+          "calls": 9,
+          "first_seconds": 56.657278071000064
+        },
+        {
+          "calls": 9,
+          "first_seconds": 62.758149069999945
+        },
+        {
+          "calls": 9,
+          "first_seconds": 68.92763010399995
+        },
+        {
+          "calls": 9,
+          "first_seconds": 75.17862199000001
+        },
+        {
+          "calls": 9,
+          "first_seconds": 81.28607248200001
+        },
+        {
+          "calls": 9,
+          "first_seconds": 87.69924047900008
+        },
+        {
+          "calls": 9,
+          "first_seconds": 94.08116566100011
+        },
+        {
+          "calls": 9,
+          "first_seconds": 99.83994170799997
+        },
+        {
+          "calls": 9,
+          "first_seconds": 105.53011266299995
+        },
+        {
+          "calls": 9,
+          "first_seconds": 111.929429175
+        }
+      ],
+      "refused_cas": 180,
+      "passed_publications": 0
+    },
+    "arrow_one_shot_no_replay": {
+      "workspaces": [
+        {
+          "calls": 9,
+          "first_seconds": 0.3416476689999399
+        }
+      ],
+      "refused_cas": 9,
+      "passed_publications": 0
+    }
+  },
+  "cleanup": "passed"
+}

@@ -17,7 +17,10 @@ import subprocess
 import sys
 import time
 
-from smoke import require_integration_config
+from smoke import SmokeError, require_integration_config
+from publication_proxy import PublicationProxy
+from flight_refusal import qualify_refusals
+from flight_cancellation import qualify_cancellation
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -86,6 +89,7 @@ def qualify(args):
         result.check_returncode()
 
     server = None
+    proxy = None
     try:
         command = [sys.executable, str(ROOT / "scripts/build_flight_server.py"),
                    "--source", str(args.server_source.resolve()), "--output", str(output / "flight-server")]
@@ -93,6 +97,11 @@ def qualify(args):
             command += ["--driver-ref", args.driver_ref]
         run("server-build", command)
         evidence["server"] = json.loads((output / "flight-server.json").read_text())
+        proxy = PublicationProxy(env["REDIS_URI"], env["REDIS_TLS_CA_FILE"],
+                                 str(args.tls_cert.resolve()), str(args.tls_key.resolve()))
+        proxy.__enter__()
+        env["REDIS_URI"] = proxy.uri
+        env["REDIS_TLS_CA_FILE"] = env["FLIGHT_SQL_TLS_CA_FILE"]
         with socket.socket() as available:
             available.bind(("127.0.0.1", 0))
             port = available.getsockname()[1]
@@ -122,6 +131,20 @@ def qualify(args):
                 run(name, [sys.executable, str(ROOT / "v2" / script), "--dbt", str(binary), *extra])
             run("rust-protocol", ["cargo", "test", "-p", "dbt-adapter-engine", "--test", "redis_adbc",
                                   "--", "--ignored", "--nocapture"], cwd=engine)
+            try:
+                qualify_refusals(binary, engine, env, proxy.gate, output)
+                if proxy.errors:
+                    raise RuntimeError("Publication proxy encountered protocol errors: " + str(proxy.errors))
+            except BaseException:
+                evidence["checks"]["refusal"] = "failed"
+                raise
+            evidence["checks"]["refusal"] = "passed"
+            try:
+                qualify_cancellation(env, output)
+            except BaseException:
+                evidence["checks"]["session-cancellation"] = "failed"
+                raise
+            evidence["checks"]["session-cancellation"] = "passed"
         evidence["status"] = "passed"
     finally:
         if server is not None:
@@ -131,6 +154,8 @@ def qualify(args):
             except subprocess.TimeoutExpired:
                 server.kill()
                 server.wait()
+        if proxy is not None:
+            proxy.__exit__(None, None, None)
         evidence["logs"] = {p.name: digest(p) for p in sorted(output.glob("*.log"))}
         manifest.write_text(json.dumps(evidence, indent=2) + "\n")
         print("Flight qualification evidence: " + str(manifest))
@@ -149,7 +174,7 @@ def main():
     args = parser.parse_args()
     try:
         qualify(args)
-    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+    except (OSError, ValueError, RuntimeError, SmokeError, subprocess.SubprocessError) as error:
         parser.exit(1, f"Flight qualification failed: {error}\n")
 
 

@@ -1,0 +1,7 @@
+   dbt-oss 2.0.11 (754f0a4-modified 2026-11-17 07:59:17)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+
+==================== Execution Summary =====================
+Finished 'run-operation' successfully for target 'smoke' [1.7s]

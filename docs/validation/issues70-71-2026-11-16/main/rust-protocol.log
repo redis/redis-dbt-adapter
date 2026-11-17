@@ -1,0 +1,39 @@
+warning: patch `arrow-flight v58.4.0 (https://github.com/sdf-labs/arrow-rs?rev=4419807fa617c6f4d9c7ab5d86c9ae94c4b9b854#4419807f)` was not used in the crate graph
+help: Check that the patched package version and available features are compatible
+      with the dependency requirements. If the patch has a different version from
+      what is locked in the Cargo.lock file, run `cargo update` to use the new
+      version. This may also occur with an optional dependency that is not enabled.
+warning: profile package spec `sdf-frontend` in profile `dev` did not match any packages
+   Compiling dbt-base v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-base)
+   Compiling minijinja-typecheck-builtins v0.0.0 (/private/tmp/redis-dbt-issue51-engine/crates/minijinja-typecheck-builtins)
+   Compiling dbt-runtime v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-runtime)
+   Compiling minijinja v2.5.0 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-jinja/minijinja)
+   Compiling dbt-tracing v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-tracing)
+   Compiling dbt-sql-base v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-sql-base)
+   Compiling dbt-frontend-common v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-frontend-common)
+   Compiling dbt-adapter-core v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-adapter-core)
+   Compiling dbt-cancel v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-cancel)
+   Compiling dbt-error v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-error)
+   Compiling dbt-telemetry v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-telemetry)
+   Compiling proto-rust v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/proto-rust)
+   Compiling dbt-tui-progress v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-tui-progress)
+   Compiling dbt-flags v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-flags)
+   Compiling minijinja-contrib v2.5.0 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-jinja/minijinja-contrib)
+   Compiling dbt-common v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-common)
+   Compiling dbt-sql-keywords v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-sql-keywords)
+   Compiling dbt-adbc v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-adbc)
+   Compiling dbt-schema-store v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-schema-store)
+   Compiling dbt-adapter-sql v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-adapter-sql)
+   Compiling dbt-jinja-vars v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-jinja-vars)
+   Compiling dbt-path v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-path)
+   Compiling dbt-auth v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-auth)
+   Compiling dbt-schemas v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-schemas)
+   Compiling dbt-adapter-engine v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-adapter-engine)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 43.40s
+     Running tests/redis_adbc.rs (/private/tmp/redis-dbt-issue40-engine/target/debug/deps/redis_adbc-7444283e44df6505)
+
+running 1 test
+test live_redis_adbc_protocol_and_concurrency ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.01s
+

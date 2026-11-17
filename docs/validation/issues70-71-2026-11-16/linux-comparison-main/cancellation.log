@@ -1,0 +1,13 @@
+   dbt-oss 2.0.11 (754f0a4-modified 2026-11-17 07:51:07)
+   Loading profiles.yml
+debug:warning=static analysis for adapter: RedisAdbc is disabled
+     Using 4 threads (target: smoke)
+Flight cancellation probe started
+
+=================== Errors and Warnings ====================
+[error] [TaskCancelled (dbt1404)]: Cancelled: SQL statement execution was cancelled
+(in :1:91)
+  --> :1:91
+
+==================== Execution Summary =====================
+Finished 'run-operation' with 1 error for target 'smoke' [1.7s]

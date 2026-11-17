@@ -26,11 +26,12 @@ cargo build -p dbt-sa-cli
 The patch contains the Rust profile, authentication, driver selection, connection
 session handling, exact type supplementation, bounded refusal retry handling,
 optional local runtime changes, tests and a generated changelog. It adds no Rust
-dependencies and does not change engine macros. The actual engine source is submitted in
-[draft engine PR #4](https://github.com/alberttwong/dbt/pull/4) at
+dependencies and does not change engine macros. The actual engine source was submitted in
+[engine PR #4](https://github.com/alberttwong/dbt/pull/4) at
 `667707f32b746359d74affa477144418ed2a0179`, stacked on the pinned Redis
-branch. It is not merged. Human auth verification remains outstanding under
-that checkout's `crates/dbt-auth/AGENTS.md`; no human verification is claimed.
+branch, and merged as `3f285a37312c6ccab44a16b71d831c49e35417bd`.
+The global integration pin remains unchanged. This record does not establish
+the separately required human auth verification.
 
 Install the separate Apache ADBC Flight client library:
 
@@ -130,9 +131,36 @@ The runner retains resolved source and runtime versions, binary and source
 digests, the patch, dependency lock, CLI logs, cancellation result and parity
 artifacts. It stops its own server on success or failure. Fixtures create/drop
 random owned schemas. A failing assertion remains a failed qualification.
-The [manual Linux workflow](../.github/workflows/v2-flight.yml) runs stable and
-main separately and uploads receipts; it has not yet been executed for this
-candidate.
+The [manual Linux workflow](../.github/workflows/v2-flight.yml) uploads receipts
+and defaults to latest driver `main`; select `compare_stable` for
+an additional independently rebuilt stable comparison. Every invocation resolves
+and records the actual driver commit, even when using a moving source ref.
+
+### Deterministic refusal and cancellation probes
+
+The qualifier places a loopback TLS proxy between its owned Flight server and
+the dedicated Redis backend. For selected publication workspaces, it executes
+the driver's real seal operation and returns CAS refusal only after a successful
+seal. The real driver exhausts its metadata rebase attempts and returns the
+Flight refusal envelope; SQL and Flight responses are never mocked. All other
+Redis traffic, including authentication, is forwarded. Do not use this fault
+fixture with a shared database.
+
+`refusal.json` records publication/rebase counts and attempt timing without
+workspace identifiers or credentials. The checks require a successful native
+retry with preserved session settings/temporary data, exactly 20 attempts on
+persistent refusal, and no replay of a script's committed first statement when
+its second statement exhausts retries. The actual optional engine Arrow runtime
+is imported separately to test empty and nonempty retained tables, the 20-attempt
+bound, and a caller-provided one-shot reader that must receive just one attempt.
+The owned schema must be dropped after both successful and failed checks.
+
+`session-cancellation.json` supplements native CLI SIGINT with a Python ADBC
+Flight protocol probe. It observes an active query lease in Redis, cancels a
+partially consumed result stream, checks time zone and temporary data on the
+same connection, and requires all newly created query leases to become inactive
+within ten seconds. It does not establish native engine pool reuse after global
+CLI interruption, nor measure all server memory, Search cursors, or file handles.
 
 ## Boundaries and remaining work
 
@@ -146,8 +174,11 @@ candidate.
   `e4dcbd37322536f73ef923e0ab4b76a1abf3d4dc`, including the strict session
   audit that failed on the older server. This is bounded local evidence,
   not proof of every conflict schedule or deployment.
-- Linux execution, deterministic native Flight refusal injection, deeper
-  same-session cancellation/resource checks and engine human review remain in
+- Deterministic native Flight refusal and same-session protocol cancellation
+  probes now pass on macOS and Linux with latest driver main; see the
+  [new evidence](../docs/validation/issues70-71-2026-11-16.md).
+  Broader native cancellation/resource coverage and the human
+  auth verification record remain tracked in
   [project #70](https://github.com/redis/redis-dbt-adapter/issues/70).
   The reproduced optional-runtime failure and candidate fix are tracked in
   [#71](https://github.com/redis/redis-dbt-adapter/issues/71).

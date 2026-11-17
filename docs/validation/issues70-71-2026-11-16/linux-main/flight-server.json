@@ -1,0 +1,9 @@
+{
+  "flight_source_commit": "e4dcbd37322536f73ef923e0ab4b76a1abf3d4dc",
+  "redis_adbc_release": null,
+  "redis_adbc_requested_ref": "main",
+  "redis_adbc_commit": "3671fca7894240551d19aeb196d7b7362f8869d2",
+  "redis_adbc_go_module": "v0.0.0-20261117071751-3671fca78942",
+  "go_version": "go version go1.27.3 linux/amd64",
+  "binary_sha256": "f061eb45719dbf8b212b7014a5ce9abb53d3c70c8df38a4ab06c937ce3a2d830"
+}
