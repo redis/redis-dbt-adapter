@@ -150,6 +150,14 @@ The runner retains resolved source and runtime versions, binary and source
 digests, the committed engine tree ID, dependency lock, CLI logs, cancellation result and parity
 artifacts. It stops its own server on success or failure. Fixtures create/drop
 random owned schemas. A failing assertion remains a failed qualification.
+`qualification.json` also retains `proxy_errors`: exception class, qualification
+phase at detection, handler stage, and (for SSL errors) bounded OpenSSL
+library/reason identifiers and the numeric SSL error code. Missing SSL identifiers
+are null; values outside the symbolic identifier format become `UNKNOWN`.
+Commands, exception messages, credentials and certificate contents are excluded.
+The `publication-proxy` check runs after handler threads have joined, so errors
+from cancellation or server/proxy shutdown also prevent aggregate success.
+SSL errors remain fatal; an unclassified peer close is not assumed benign.
 The [manual Linux workflow](../.github/workflows/v2-flight.yml) uploads receipts
 and defaults to latest driver `main`; select `compare_stable` for
 an additional independently rebuilt stable comparison. Every invocation resolves

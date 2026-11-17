@@ -75,6 +75,8 @@ def qualify(args):
     manifest = output / "qualification.json"
 
     def run(name, command, *, cwd=ROOT, timeout=900):
+        if proxy is not None:
+            proxy.set_phase(name)
         with (output / (name + ".log")).open("w") as log:
             result = subprocess.run(command, cwd=cwd, env=env, stdout=log,
                                     stderr=subprocess.STDOUT, timeout=timeout)
@@ -126,21 +128,25 @@ def qualify(args):
             run("rust-protocol", ["cargo", "test", "-p", "dbt-adapter-engine", "--test", "redis_adbc",
                                   "--", "--ignored", "--nocapture"], cwd=engine)
             try:
+                proxy.set_phase('refusal')
                 qualify_refusals(binary, engine, env, proxy.gate, output)
-                if proxy.errors:
-                    raise RuntimeError("Publication proxy encountered protocol errors: " + str(proxy.errors))
+                proxy.check_errors()
             except BaseException:
                 evidence["checks"]["refusal"] = "failed"
                 raise
             evidence["checks"]["refusal"] = "passed"
             try:
+                proxy.set_phase('session-cancellation')
                 qualify_cancellation(env, output)
+                proxy.check_errors()
             except BaseException:
                 evidence["checks"]["session-cancellation"] = "failed"
                 raise
             evidence["checks"]["session-cancellation"] = "passed"
         evidence["status"] = "passed"
     finally:
+        if proxy is not None:
+            proxy.set_phase('server-shutdown')
         if server is not None:
             server.terminate()
             try:
@@ -149,10 +155,19 @@ def qualify(args):
                 server.kill()
                 server.wait()
         if proxy is not None:
+            proxy.set_phase('proxy-shutdown')
             proxy.__exit__(None, None, None)
+            evidence['proxy_errors'] = proxy.error_receipt()
+            evidence['checks']['publication-proxy'] = 'failed' if evidence['proxy_errors'] else 'passed'
+            if evidence['proxy_errors']:
+                evidence['status'] = 'failed'
         evidence["logs"] = {p.name: digest(p) for p in sorted(output.glob("*.log"))}
         manifest.write_text(json.dumps(evidence, indent=2) + "\n")
         print("Flight qualification evidence: " + str(manifest))
+        # Include errors from cancellation and shutdown in the aggregate result.
+        # Preserve an earlier failure while still recording all proxy diagnostics.
+        if proxy is not None and sys.exc_info()[0] is None:
+            proxy.check_errors()
 
 
 def main():
