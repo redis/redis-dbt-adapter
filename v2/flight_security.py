@@ -10,7 +10,7 @@ import tempfile
 import time
 from urllib.parse import urlsplit, urlunsplit
 
-from smoke import SmokeError, configure_transport, require_integration_config
+from runner import SmokeError, configure_transport, require_integration_config
 
 
 def verify_password_redaction(output, env):

@@ -3,43 +3,29 @@
 import argparse
 import gzip
 import json
-import os
 from pathlib import Path
 import shutil
 import subprocess
-import tempfile
-import uuid
 
-from smoke import require_integration_config, SmokeError, check_results, check_version, configure_transport
+from runner import SmokeError, configure_transport, dbt_project
+from smoke import check_results
 
 
 def run_parity(binary, keep_artifacts=False, transport="redis"):
-    require_integration_config()
-    version = subprocess.run([binary, '--version'], capture_output=True, text=True, check=True)
-    check_version(version.stdout + version.stderr)
-    directory = Path(tempfile.mkdtemp(prefix='redis-dbt-v2-parity-'))
-    project, target = directory / 'project', directory / 'target'
+    with dbt_project(binary, "parity", keep_artifacts=keep_artifacts) as session:
+        _run_parity(session, transport)
+
+
+def _run_parity(session, transport):
+    project, target, directory = session.project, session.target, session.directory
+    schema = session.env['REDIS_DBT_V2_SCHEMA']
     shutil.copytree(Path(__file__).parent / 'parity', project)
-    schema = 'dbt_v2_parity_' + uuid.uuid4().hex[:12]
-    env = os.environ.copy()
-    env.update(REDIS_DBT_V2_SCHEMA=schema, DBT_ALLOW_EXPERIMENTAL_ADAPTERS='yes',
-               DBT_SEND_ANONYMOUS_USAGE_STATS='false', DBT_LOG_PATH=str(directory / 'logs'))
-    try:
-        configure_transport(project, env, transport)
-    except Exception:
-        shutil.rmtree(directory)
-        raise
-    common = ['--project-dir', str(project), '--profiles-dir', str(project), '--target-path', str(target)]
-    parsed = False
+    configure_transport(project, session.env, transport)
 
     def run(*args, fails=False):
-        print('Parity: dbt ' + ' '.join(args), flush=True)
-        result = subprocess.run([binary, *args, *common], env=env, capture_output=fails, text=True)
-        if fails:
-            if result.returncode == 0 or 'null' not in (result.stdout + result.stderr).lower():
-                raise SmokeError('Expected the NOT NULL contract to reject a NULL insert')
-        else:
-            result.check_returncode()
+        result = session.run(*args, check=not fails, capture_output=fails)
+        if fails and (result.returncode == 0 or 'null' not in (result.stdout + result.stderr).lower()):
+            raise SmokeError('Expected the NOT NULL contract to reject a NULL insert')
 
     def operation(name, **kwargs):
         run('run-operation', name, '--args', json.dumps(kwargs))
@@ -50,68 +36,57 @@ def run_parity(binary, keep_artifacts=False, transport="redis"):
     def table(name):
         return f'"{schema}"."{name}"'
 
-    try:
-        run('parse')
-        parsed = True
-        for flags in [('--full-refresh',), ()]:
-            (target / 'run_results.json').unlink(missing_ok=True)
-            run('build', '--write-catalog', *flags)
-            check_results(target / 'run_results.json')
-            results = json.loads((target / 'run_results.json').read_text())['results']
-            required = {'model.redis_dbt_v2_smoke.' + name for name in ['trips_contract', 'trips_merge', 'trips_python']}
-            required.add('snapshot.redis_dbt_v2_smoke.trips_snapshot')
-            if not required <= {row['unique_id'] for row in results if row['status'] == 'success'}:
-                raise SmokeError('Missing successful parity model or snapshot results')
-        assert_query(f'select count(*) from {table("trips_python")} where double_trips != trips * 2', 0)
-        assert_query(f'select count(*) from {table("trips_python")}', 3)
-        if transport == 'flightsql':
-            operation('assert_exact_metadata')
-        run('run-operation', 'violate_contract', fails=True)
-        assert_query(f'select count(*) from {table("trips_contract")}', 3)
-        operation('mutate_trips')
-        run('snapshot')
-        assert_query(f'select count(*) from {table("trips_snapshot")} where id=1', 2)
-        assert_query(f"select count(*) from {table('trips_snapshot')} where id=2 and dbt_is_deleted='True'", 1)
-        run('run', '-s', 'trips_merge')
-        assert_query(f"select count(*) from {table('trips_merge')} where id=1 and zone='updated'", 1)
-        assert_query(f'select count(*) from {table("trips_merge")}', 3)
-        run('run', '-s', '+trips_microbatch', '--vars', '{microbatch_demo: true}', '--full-refresh',
-            '--event-time-start', '2024-01-01', '--event-time-end', '2024-01-03')
-        run('run', '-s', 'trips_microbatch', '--vars', '{microbatch_demo: true}',
-            '--event-time-start', '2024-01-02', '--event-time-end', '2024-01-03')
-        assert_query(f'select count(*) from {table("trips_microbatch")}', 2)
-        assert_query(f"select count(*) from {table('trips_microbatch')} where occurred_at < cast('2024-01-02' as timestamp)", 1)
-        csv_path = directory / 'sample.csv.gz'
-        with gzip.open(csv_path, 'wt') as output:
-            output.write('id,name\n10,a\n20,b\n30,c\n40,d\n50,e\n')
-        operation('load_parity_csv', path=str(csv_path))
-        assert_query(f'select count(*) from {table("csv_sample")}', 2)
-        # BIGINT SUM returns an exact decimal in newer drivers. Assert these
-        # small integer totals as BIGINT rather than relying on Jinja's int
-        # filter to coerce a decimal object.
-        assert_query(f'select cast(sum(file_row) as bigint) from {table("csv_sample")}', 4)
-        assert_query(f'select cast(sum(id) as bigint) from {table("csv_sample")}', 40)
-        run('docs', 'generate', '--write-catalog')
-        catalog = json.loads((target / 'catalog.json').read_text())
-        if catalog.get('errors'):
-            raise SmokeError('Catalog export reported errors')
-        contract = catalog['nodes']['model.redis_dbt_v2_smoke.trips_contract']
-        if contract['metadata']['comment'] != "Driver's persisted table description":
-            raise SmokeError('Persisted table description missing from catalog')
-        if contract['columns']['zone']['comment'] != "Driver's persisted zone description":
-            raise SmokeError('Persisted column description missing from catalog')
-        run('build', '--empty', '--exclude-resource-type', 'snapshot', '--exclude', 'assert_totals')
-        assert_query(f'select count(*) from {table("trips_table")}', 0)
-        print('Native v2 parity passed: Python, contracts, snapshots, merge, microbatch, CSV sampling, docs, catalog, and empty builds.', flush=True)
-    finally:
-        try:
-            if parsed:
-                run('run-operation', 'drop_smoke_schema')
-        finally:
-            if keep_artifacts:
-                print('Parity artifacts: ' + str(directory), flush=True)
-            else:
-                shutil.rmtree(directory)
+    run('parse')
+    for flags in [('--full-refresh',), ()]:
+        (target / 'run_results.json').unlink(missing_ok=True)
+        run('build', '--write-catalog', *flags)
+        check_results(target / 'run_results.json')
+        results = json.loads((target / 'run_results.json').read_text())['results']
+        required = {'model.redis_dbt_v2_smoke.' + name for name in ['trips_contract', 'trips_merge', 'trips_python']}
+        required.add('snapshot.redis_dbt_v2_smoke.trips_snapshot')
+        if not required <= {row['unique_id'] for row in results if row['status'] == 'success'}:
+            raise SmokeError('Missing successful parity model or snapshot results')
+    assert_query(f'select count(*) from {table("trips_python")} where double_trips != trips * 2', 0)
+    assert_query(f'select count(*) from {table("trips_python")}', 3)
+    if transport == 'flightsql':
+        operation('assert_exact_metadata')
+    run('run-operation', 'violate_contract', fails=True)
+    assert_query(f'select count(*) from {table("trips_contract")}', 3)
+    operation('mutate_trips')
+    run('snapshot')
+    assert_query(f'select count(*) from {table("trips_snapshot")} where id=1', 2)
+    assert_query(f"select count(*) from {table('trips_snapshot')} where id=2 and dbt_is_deleted='True'", 1)
+    run('run', '-s', 'trips_merge')
+    assert_query(f"select count(*) from {table('trips_merge')} where id=1 and zone='updated'", 1)
+    assert_query(f'select count(*) from {table("trips_merge")}', 3)
+    run('run', '-s', '+trips_microbatch', '--vars', '{microbatch_demo: true}', '--full-refresh',
+        '--event-time-start', '2024-01-01', '--event-time-end', '2024-01-03')
+    run('run', '-s', 'trips_microbatch', '--vars', '{microbatch_demo: true}',
+        '--event-time-start', '2024-01-02', '--event-time-end', '2024-01-03')
+    assert_query(f'select count(*) from {table("trips_microbatch")}', 2)
+    assert_query(f"select count(*) from {table('trips_microbatch')} where occurred_at < cast('2024-01-02' as timestamp)", 1)
+    csv_path = directory / 'sample.csv.gz'
+    with gzip.open(csv_path, 'wt') as output:
+        output.write('id,name\n10,a\n20,b\n30,c\n40,d\n50,e\n')
+    operation('load_parity_csv', path=str(csv_path))
+    assert_query(f'select count(*) from {table("csv_sample")}', 2)
+    # BIGINT SUM returns an exact decimal in newer drivers. Assert these
+    # small integer totals as BIGINT rather than relying on Jinja's int
+    # filter to coerce a decimal object.
+    assert_query(f'select cast(sum(file_row) as bigint) from {table("csv_sample")}', 4)
+    assert_query(f'select cast(sum(id) as bigint) from {table("csv_sample")}', 40)
+    run('docs', 'generate', '--write-catalog')
+    catalog = json.loads((target / 'catalog.json').read_text())
+    if catalog.get('errors'):
+        raise SmokeError('Catalog export reported errors')
+    contract = catalog['nodes']['model.redis_dbt_v2_smoke.trips_contract']
+    if contract['metadata']['comment'] != "Driver's persisted table description":
+        raise SmokeError('Persisted table description missing from catalog')
+    if contract['columns']['zone']['comment'] != "Driver's persisted zone description":
+        raise SmokeError('Persisted column description missing from catalog')
+    run('build', '--empty', '--exclude-resource-type', 'snapshot', '--exclude', 'assert_totals')
+    assert_query(f'select count(*) from {table("trips_table")}', 0)
+    print('Native v2 parity passed: Python, contracts, snapshots, merge, microbatch, CSV sampling, docs, catalog, and empty builds.', flush=True)
 
 
 def main():

@@ -66,6 +66,14 @@ The integration work is tracked in
 This directory replaces the need for a separate `redis-dbt-v2-adapter` integration
 repository. That repository remains empty.
 
+The v2 smoke, parity and taxi entry points share `runner.py` for temporary
+projects, generated schema namespaces, dbt invocation and cleanup. Scenario
+commands and result validators remain in their respective runners. Failed
+profile/parse setup does not attempt warehouse cleanup; after a successful
+parse, cleanup runs on success or failure. A cleanup error fails an otherwise
+successful run and does not replace an earlier command error. `--keep-artifacts`
+retains files for parity and taxi, including on failure.
+
 ## Smoke checks
 
 Pass the **v2 executable explicitly**. Do not pass `v1/.venv/bin/dbt`, which is
