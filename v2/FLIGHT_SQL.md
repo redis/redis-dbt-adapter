@@ -175,9 +175,9 @@ CLI interruption, nor measure all server memory, Search cursors, or file handles
   audit that failed on the older server. This is bounded local evidence,
   not proof of every conflict schedule or deployment.
 - Deterministic native Flight refusal and same-session protocol cancellation
-  probes now pass locally with latest driver main; see the
+  probes now pass on macOS and Linux with latest driver main; see the
   [new evidence](../docs/validation/issues70-71-2026-11-16.md).
-  Linux execution, broader native cancellation/resource coverage and the human
+  Broader native cancellation/resource coverage and the human
   auth verification record remain tracked in
   [project #70](https://github.com/redis/redis-dbt-adapter/issues/70).
   The reproduced optional-runtime failure and candidate fix are tracked in
