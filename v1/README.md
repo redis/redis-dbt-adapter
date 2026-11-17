@@ -79,6 +79,9 @@ make setup
 - runs `uv sync` and `dbt deps` (dbt_utils, and the local `redis_adbc_utils`)
 - puts the driver in `driver/`: the prebuilt library from the latest
   published release, after checking its SHA-256.
+  When upgrading from an older driver storage format, use a fresh, isolated
+  Redis database and reload sources/models; the driver rejects incompatible
+  existing storage without modifying it. See [driver storage requirements](adapter/README.md#model-indexes).
   Where the release has no build (another platform, or `DRIVER_VERSION` set
   to a commit) it builds the driver from source instead; `make driver-build`
   always does
@@ -335,6 +338,7 @@ materializations, so the adapter covers what isn't SQL:
 |-|-|
 | Connection | `adbc_driver_manager` DB-API, autocommit. The driver has no transactions: it accepts dbt's `BEGIN`/`COMMIT` as no-ops, and a `SET LOCAL` lasts until the model's `COMMIT`, as on Postgres. Results over 65,536 rows stream from the driver, so an error in a later batch is raised as dbt reads the rows; the adapter reports it as a database error, like one from the query. Ctrl-C and `--fail-fast` cancel the running statements and streamed results (ADBC `StatementCancel`); each fails with `CANCELLED`, which the adapter reports as a runtime error rather than a database error |
 | Metadata | Relations, columns and the docs catalog come from ADBC `GetObjects`; table comments come from `information_schema.tables`. Relations are matched with their case, since the driver keeps schema and table names as written (`alias='MyTable'` works). Column types are parsed as dbt-postgres reports them (`numeric` with precision and scale, `character varying` with its length) |
+| Model indexes | `indexes` config creates named nonunique Redis Search indexes on tables and initial/full-refresh incremental builds; `btree` and `hash` are compatibility hints. See [configuration and lifecycle](adapter/README.md#model-indexes) |
 | `persist_docs` | Descriptions are stored with `COMMENT ON TABLE` / `VIEW` / `COLUMN`; the marts turn it on |
 | `grants` | Native SELECT grants use dedicated Redis Software ACLs when `adbc.redis.rbac` is configured; otherwise skipped with a warning. See [setup](#sql-grants-through-dedicated-redis-software-acls). |
 | Temporary tables | `make_temp_relation` renders them unqualified (a schema-qualified name always means a permanent table), and their columns are looked up under `pg_temp` |
