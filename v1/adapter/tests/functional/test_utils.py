@@ -237,20 +237,14 @@ class TestCalculateFreshnessMethod(BaseCalculateFreshnessMethod):
     pass
 
 
-NO_ARRAYS = pytest.mark.skip(reason="the Redis ADBC driver has no arrays")
-
-
-@NO_ARRAYS
 class TestArrayAppend(BaseArrayAppend):
     pass
 
 
-@NO_ARRAYS
 class TestArrayConcat(BaseArrayConcat):
     pass
 
 
-@NO_ARRAYS
 class TestArrayConstruct(BaseArrayConstruct):
     pass
 

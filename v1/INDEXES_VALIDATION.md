@@ -169,3 +169,29 @@ reproduced in this source-driver rerun. This does not claim that published
 v0.0.27, the full taxi project, the native v2 engine, Flight SQL transport or
 the driver's own Go/ADBC validation suites were retested. The dedicated
 source-rerun fixture was removed after validation.
+
+## Array skip removal — November 16, 2026
+
+Removed the stale `NO_ARRAYS` marker from `TestArrayAppend`, `TestArrayConcat`
+and `TestArrayConstruct` in `adapter/tests/functional/test_utils.py`. Their six
+existing test cases are now enabled. No assertions were weakened and no adapter
+implementation change was required.
+
+Using the same source-built driver `36f456a44fc1af7839e43ab5912a606ad8dadf92`
+and library fingerprint recorded above, provisioned a fresh dedicated
+three-shard Redis Enterprise fixture with trusted TLS, named-user authentication
+and verified active 4x QPF. Verification passed before and after the run.
+
+From `v1/`, with the fixture's private environment loaded:
+
+```sh
+.venv/bin/pytest \
+  adapter/tests/functional/test_utils.py::TestArrayAppend \
+  adapter/tests/functional/test_utils.py::TestArrayConcat \
+  adapter/tests/functional/test_utils.py::TestArrayConstruct -q
+```
+
+**Result: 6 passed, zero skips/failures/errors in 4.31 seconds.** These exercise
+real dbt builds and result/column-type comparisons, including empty arrays.
+The fixture was removed after validation. The earlier full-suite totals remain
+historical; the entire suite was not rerun after removing these six skips.
