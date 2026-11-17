@@ -41,6 +41,16 @@ statements to close before their connection. The table materialization,
 CSV sampling, and SQL macro overrides still provide Redis-specific behavior
 that the current upstream defaults do not cover.
 
+### Flight build toolchain
+
+The pinned Flight sources declare Go 1.27.3, while the current driver requires
+Go 1.27.4. Both Flight qualification workflows explicitly select Go 1.27.4;
+using only the Flight go.mod selects an insufficient toolchain when
+`GOTOOLCHAIN=local`. The v1 qualification source (`4d91e3713508`) built
+successfully against driver v0.0.29 with Go 1.27.4 and automatic toolchain
+switching disabled. The build evidence recorded driver commit `30a9eefbf13d`
+and the expected selected toolchain.
+
 ### Validation after rebasing onto current main
 
 The final branch preserves Python 3.14+, adapter version 0.3.2, the latest-driver

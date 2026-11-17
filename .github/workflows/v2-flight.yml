@@ -53,9 +53,10 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@v7
         with:
-          go-version-file: flight/go.mod
+          # The latest Redis driver requires Go 1.27.4, newer than the pinned Flight module.
+          go-version: "1.27.4"
           cache-dependency-path: flight/go.sum
-      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
           python-version: "3.14"
       - name: Install the separate Flight client and Arrow runtime
