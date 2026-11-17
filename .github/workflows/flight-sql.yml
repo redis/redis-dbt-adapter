@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 30
     env:
       GOFLAGS: -p=2
-      FLIGHT_SQL_URI: grpc+tls://localhost:18841
+      FLIGHT_SQL_URI: grpc+tls://127.0.0.1:18841
       DBT_SEND_ANONYMOUS_USAGE_STATS: "false"
     steps:
       - uses: actions/checkout@v7
