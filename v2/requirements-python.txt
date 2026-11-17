@@ -1,5 +1,5 @@
 # Requires Python 3.14 or later.
 # Optional local runtime for native Python models and the CSV loader.
 # No Python dbt adapter is installed.
-pyarrow==26.0.0
-adbc-driver-manager==1.12.0
+pyarrow==26.0.1
+adbc-driver-manager==1.13.0

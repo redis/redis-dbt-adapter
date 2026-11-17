@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build the Redis ADBC driver from source and copy it to ./driver/.
-# Requires Go 1.26+ and a C toolchain (cgo). DRIVER_VERSION can be a release
+# Requires Go 1.27.4+ and a C toolchain (cgo). DRIVER_VERSION can be a release
 # tag or any commit.
 set -euo pipefail
 

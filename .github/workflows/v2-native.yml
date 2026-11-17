@@ -68,7 +68,7 @@ jobs:
           rustup show
           cargo build -p dbt-sa-cli
 
-      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
           python-version: "3.14"
 
@@ -107,13 +107,14 @@ jobs:
         env:
           REDIS_ADBC_DRIVER: ${{ github.workspace }}/v1/driver/libadbc_driver_redis.so
         run: |
-          export REDIS_URI="$(python3 - <<'PYURI'
+          REDIS_URI="$(python3 - <<'PYURI'
           import os
           from urllib.parse import urlsplit, urlunsplit
           uri = urlsplit(os.environ["REDIS_URI"])
           print(urlunsplit(uri._replace(netloc="wrong:incorrect-uri-password@" + uri.netloc.rsplit("@", 1)[-1])))
           PYURI
           )"
+          export REDIS_URI
           python3 v2/smoke.py --dbt "$GITHUB_WORKSPACE/engine/target/debug/dbt" --build
 
       - name: Download taxi data

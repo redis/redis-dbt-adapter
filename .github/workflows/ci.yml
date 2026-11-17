@@ -40,7 +40,7 @@ jobs:
         with:
           ref: ${{ inputs.source_ref || github.sha }}
           persist-credentials: false
-      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
           python-version: ${{ matrix.python }}
       - name: Export locked runtime and test dependencies
@@ -61,7 +61,7 @@ jobs:
         with:
           ref: ${{ inputs.source_ref || github.sha }}
           persist-credentials: false
-      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
           python-version: "3.14"
       - name: Test the v2 smoke runner without v1 dependencies
@@ -104,7 +104,7 @@ jobs:
       - name: Require authenticated Redis Enterprise over TLS
         run: python3 ../scripts/integration_config.py
 
-      - uses: astral-sh/setup-uv@v10.2.0 # no major-version tags
+      - uses: astral-sh/setup-uv@v10.3.3 # no major-version tags
         with:
           python-version: ${{ matrix.python }}
           enable-cache: true
@@ -230,7 +230,7 @@ jobs:
       - name: Require authenticated Redis Enterprise over TLS
         run: python3 ../scripts/integration_config.py
 
-      - uses: astral-sh/setup-uv@v10.2.0 # no major-version tags
+      - uses: astral-sh/setup-uv@v10.3.3 # no major-version tags
         with:
           python-version: ${{ matrix.python }}
           enable-cache: true
