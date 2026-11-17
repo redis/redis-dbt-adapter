@@ -1,0 +1,19 @@
+# Flight uses its own client library, credentials, and CA; Redis options live on the server.
+redis_dbt_v2_smoke:
+  target: smoke
+  outputs:
+    smoke:
+      type: redis_adbc
+      transport: flightsql
+      driver: "{{ env_var('FLIGHT_SQL_DRIVER') }}"
+      uri: "{{ env_var('FLIGHT_SQL_URI') }}"
+      username: "{{ env_var('FLIGHT_SQL_USERNAME') }}"
+      password: "{{ env_var('FLIGHT_SQL_PASSWORD') }}"
+      tls_ca_file: "{{ env_var('FLIGHT_SQL_TLS_CA_FILE') }}"
+      database: redis
+      schema: "{{ env_var('REDIS_DBT_V2_SCHEMA') }}"
+      time_zone: America/New_York
+      threads: 4
+      driver_options:
+        adbc.flight.sql.rpc.timeout_seconds.connect: 15
+        adbc.flight.sql.rpc.timeout_seconds.query: 120

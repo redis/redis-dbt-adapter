@@ -1,0 +1,58 @@
+warning: patch `arrow-flight v58.4.0 (https://github.com/sdf-labs/arrow-rs?rev=4419807fa617c6f4d9c7ab5d86c9ae94c4b9b854#4419807f)` was not used in the crate graph
+help: Check that the patched package version and available features are compatible
+      with the dependency requirements. If the patch has a different version from
+      what is locked in the Cargo.lock file, run `cargo update` to use the new
+      version. This may also occur with an optional dependency that is not enabled.
+warning: profile package spec `sdf-frontend` in profile `dev` did not match any packages
+   Compiling dbt-auth v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-auth)
+   Compiling dbt-adapter-engine v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-adapter-engine)
+   Compiling dbt-adapter v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-adapter)
+warning: unnecessary qualification
+    --> crates/dbt-adapter/src/adapter/adapter_impl.rs:2269:17
+     |
+2269 |                 crate::metadata::redis::supplement_schema(
+     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: requested on the command line with `-W unused-qualifications`
+help: remove the unnecessary path segments
+     |
+2269 -                 crate::metadata::redis::supplement_schema(
+2269 +                 metadata::redis::supplement_schema(
+     |
+
+warning: unnecessary qualification
+    --> crates/dbt-adapter/src/sql_types.rs:1415:33
+     |
+1415 |             DefaultTypeOps::new(AdapterType::RedisAdbc)
+     |                                 ^^^^^^^^^^^^^^^^^^^^^^
+     |
+help: remove the unnecessary path segments
+     |
+1415 -             DefaultTypeOps::new(AdapterType::RedisAdbc)
+1415 +             DefaultTypeOps::new(RedisAdbc)
+     |
+
+warning: unnecessary qualification
+    --> crates/dbt-adapter/src/sql_types.rs:1421:33
+     |
+1421 |             DefaultTypeOps::new(AdapterType::Postgres)
+     |                                 ^^^^^^^^^^^^^^^^^^^^^
+     |
+help: remove the unnecessary path segments
+     |
+1421 -             DefaultTypeOps::new(AdapterType::Postgres)
+1421 +             DefaultTypeOps::new(Postgres)
+     |
+
+warning: `dbt-adapter` (lib test) generated 3 warnings (run `cargo fix --lib -p dbt-adapter --tests` to apply 3 suggestions)
+    Finished `test` profile [unoptimized] target(s) in 8.35s
+     Running unittests src/lib.rs (/tmp/redis-dbt-issue40-engine/target/debug/deps/dbt_adapter-0afee270fa840ba2)
+
+running 4 tests
+test sql_types::tests::redis_decimal256_preserves_precision_and_nullability ... ok
+test engine::redis::tests::settings_are_sql_literals_and_probe_precedes_settings ... ok
+test engine::redis::tests::pool_key_includes_session_settings_and_library ... ok
+test column::column_builder::tests::redis_preserves_exact_sql_types_from_flight_schema_metadata ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 1699 filtered out; finished in 0.00s
+

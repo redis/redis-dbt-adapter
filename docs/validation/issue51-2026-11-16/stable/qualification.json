@@ -1,0 +1,85 @@
+{
+  "status": "incomplete",
+  "platform": "macOS-26.7.3-arm64-arm-64bit-Mach-O",
+  "python": "3.13.16 (main, Oct 14 2026, 00:55:38) [Clang 23.1.3 ]",
+  "engine_commit": "754f0a47164f86226dc568096ac56906ff9d2e69",
+  "engine_patch_sha256": "2f1468ffeb7078de701685ecd609bcd734bae1cce259bd8104e40ee7846cb9f0",
+  "dbt_version": "dbt-oss 2.0.11",
+  "dbt_sha256": "3beaeb898f24e6428daa5175bf6debce55d3d66757eee76505e228a623a30b85",
+  "flight_client_sha256": "605e9672cff94b3baf1b7e36146ef2a8fee2d858e5b3ab794b8c1581ec28bdef",
+  "checks": {
+    "server-build": "passed",
+    "security": "passed",
+    "smoke": "passed",
+    "parity-python-csv": "passed",
+    "rust-protocol": "failed"
+  },
+  "engine_source_files": {
+    ".changes/unreleased/Features-20261116-230104.yaml": "863e49910b822cef05eb5a192386ce8869252a2395e4bd04d9e58f5c025ffeb8",
+    "crates/dbt-adapter-engine/src/retry/redis.rs": "74012cba86eea095533c69b0c2c1839bfcc1ce931ca3e0c1feef263f406d0bde",
+    "crates/dbt-adapter-engine/tests/redis_adbc.rs": "6790d868e2cbd9f20f4c620b4fa072c36e4d44784a5886879ed3e5f10aa176f7",
+    "crates/dbt-adapter/src/adapter/adapter_impl.rs": "1c119725e3e8bee7a99d46ea5320ee63b562641a55bab063b26e3013c51ad312",
+    "crates/dbt-adapter/src/column/column_builder.rs": "4c8e271477e29eb6558a3e2de8eb48497685f7e771e4cc1cf9b5942dc8c97595",
+    "crates/dbt-adapter/src/column/types.rs": "053c74f95306748f739ba8f025ef84217bfb7cd5d4511c4c6b3297d75a8c5038",
+    "crates/dbt-adapter/src/engine/adapter_engine.rs": "bc0b4a4ec4b0e0b3cb077c679ca0f8ae20efc6900ca73c073b06485b2a24c9fa",
+    "crates/dbt-adapter/src/engine/adbc.rs": "337044b45c728e3f2b22244062da9eaa2410fe78c3a9ef60e7014adc49cc1fa3",
+    "crates/dbt-adapter/src/engine/mod.rs": "5f4c421d3683ad307b195c056b46e80742ae5c31a104376a0c8b0b787c1fac47",
+    "crates/dbt-adapter/src/engine/redis.rs": "fe97279a25b00a866842f5ab16c1bb51f6558692c1df169b83683117feb84916",
+    "crates/dbt-adapter/src/metadata/mod.rs": "93da25302598af0632f5bf7d934fda72bb32c730eaf511de10f280399c3a7f04",
+    "crates/dbt-adapter/src/metadata/redis.rs": "c2eba3d056b587945762fc147f84e2ad896de0c396e5af45b615709a4bc34a0c",
+    "crates/dbt-adapter/src/python/redis/mod.rs": "de5c2bc072bcb3b8f1bc13c770cda947bbc04a099e6f7a177a56936a28207475",
+    "crates/dbt-adapter/src/python/redis/runtime.py": "49c5b5327f15d50dc4a50d56f1c49204080db42e08036301b5b54551cfd7abb5",
+    "crates/dbt-adapter/tests/python/test_redis_runtime.py": "d34a5165637b6ed630a47a4ace497b580ab76e12c07a81b85e55c759207b6baa",
+    "crates/dbt-auth/src/redis_adbc/mod.rs": "2dfa75ac75221fdf3e049c40bf8b8ab98dbe3f350ffc7948e0c4ed34265a7af9",
+    "crates/dbt-schemas/src/schemas/profiles.rs": "33e8ad5e0eb26174156d1a9afc1d49996193abee03b62fcb5a11d234542faa8c"
+  },
+  "cargo_lock_sha256": "bbd3415be59605c7b91cab14f0e0b4e9e61e49166e2b299ad116aa28e333ccda",
+  "rustc": "rustc 1.96.1 (31fca3adb 2026-06-26)",
+  "integration_commit": "c195c80c20ba722695a62905eb8086431ee96dea",
+  "runner_source_files": {
+    "v2/apply_engine_patch.py": "97b88d4088445d9fdda8df2c0feee26dff9576c4703d170b8af9f98a068a1fd5",
+    "v2/flight_security.py": "6c71e5b088bdb1f6df05f9080b630056c4aafe090fa1384e33511f368b1d2106",
+    "v2/parity.py": "a36b928358cf1685ad16d91ce9ce91ba2d024ec00bd8a3cdab20d10e40784766",
+    "v2/qualify_flight.py": "eefd05d9ea42df3b10c3980ffe4947d18e452ea7e70b77771ce1ecad204e9d0d",
+    "v2/smoke.py": "c3eccb1eac5e37c5864575b8eee7561ae25fe8faf8e6811f6fc22b76fc2b749f",
+    "v2/taxi.py": "059b36ad581e99072b96de1858f152af0a89883a952f7e7fc407a528af253244",
+    "v2/flight_profiles.yml": "93b42bf360b8500d53bd6b19755dc3f3c4e2945d00abff424ecc9a784d744581",
+    "v2/upstream.json": "08abd4df4575b69e506c144cf42e3325c0e2d4ee35186295f1a4305d8aef460b",
+    "scripts/build_flight_server.py": "e5cb3c6b23a891c1059117d9a8be9cd79c669b69b6e02181a6920a164e6e990d"
+  },
+  "backend": {
+    "redis_info": [
+      "redis_version:8.6.2",
+      "redis_mode:standalone"
+    ],
+    "image": "redislabs/redis:8.2.0-78.18",
+    "shards_count": 3,
+    "tls_mode": "enabled",
+    "query_performance_factor": {
+      "active": true,
+      "scaling_factor": 4
+    },
+    "topology_verified": true
+  },
+  "adbc-driver-flightsql": "1.13.0",
+  "adbc-driver-manager": "1.13.0",
+  "pyarrow": "26.0.0",
+  "server": {
+    "flight_source_commit": "4d91e37135080be7f0eeb770fc89fa7adeb14bc8",
+    "redis_adbc_release": "v0.0.27",
+    "redis_adbc_requested_ref": "v0.0.27",
+    "redis_adbc_commit": "225e00569986e8340acd5978345f3275a889ade6",
+    "redis_adbc_go_module": "v0.0.0-20261115214919-225e00569986",
+    "go_version": "go version go1.27.3 darwin/arm64",
+    "binary_sha256": "34e776682b8c97157cabd4a380cd832a351adc17be8de37fd9129453f411adf3"
+  },
+  "logs": {
+    "cancellation.log": "f34b7df7a13f14889887dc7c65339b6741f833140c7765ecb4998530a9fc9fe6",
+    "parity-python-csv.log": "1f359f5e81bdb042189892df601e25f6fac59d17ac49a8f99c21ad380e35cf1f",
+    "rust-protocol.log": "78d7c87e401f9333d3958c3f33ef96a005ad4d1b214b0149953c9aac2a3ceb5a",
+    "security.log": "5bf88c2b8a204bfabc9774b38c10d2996bdfe75f8aa83c20227bd207f53d1b80",
+    "server-build.log": "37606a20cdde416e74671ce024c1f2ad7bf079dacfd5172ad3a5ee2fc9b12052",
+    "server.log": "71685125f8efe0fc4fd9892f3aa381f7a4c3e8c247dd877e7ad29673a909f168",
+    "smoke.log": "186384c24e016c9895db7a4df93fe4cd1d0d3e36300eb454bb1178717adf8f96"
+  }
+}

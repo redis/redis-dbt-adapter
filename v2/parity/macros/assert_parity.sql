@@ -19,3 +19,17 @@
 {% macro violate_contract() %}
   {% do run_query('insert into ' ~ ref('trips_contract') ~ " (id, zone) values (null, 'invalid')") %}
 {% endmacro %}
+
+{% macro assert_exact_metadata() %}
+  {% set relation = api.Relation.create(database=target.database, schema=target.schema, identifier='exact_metadata', type='table') %}
+  {% do run_query('create table ' ~ relation ~ ' (amount numeric(12,2), label varchar(17), occurred timestamp(3))') %}
+  {% set columns = adapter.get_columns_in_relation(relation) %}
+  {% set expected = ['NUMERIC(12,2)', 'VARCHAR(17)', 'TIMESTAMP(3)'] %}
+  {% if columns | length != 3 %}{{ exceptions.raise_compiler_error('Expected three exact metadata columns') }}{% endif %}
+  {% for column in columns %}
+    {% if column.data_type | upper | replace(' ', '') != expected[loop.index0] %}
+      {{ exceptions.raise_compiler_error('Lost exact SQL declaration: ' ~ column.data_type) }}
+    {% endif %}
+  {% endfor %}
+  {% if not columns[1].is_string() %}{{ exceptions.raise_compiler_error('VARCHAR lost string classification') }}{% endif %}
+{% endmacro %}

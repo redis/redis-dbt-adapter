@@ -1,0 +1,10 @@
+CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X github.com/redis/redis-apache-arrow-flight/server.Version=dbt-4d91e3713508-adbc-225e00569986" -o bin/redis-flight-server ./cmd/redis-flight-server
+{
+  "flight_source_commit": "4d91e37135080be7f0eeb770fc89fa7adeb14bc8",
+  "redis_adbc_release": "v0.0.27",
+  "redis_adbc_requested_ref": "v0.0.27",
+  "redis_adbc_commit": "225e00569986e8340acd5978345f3275a889ade6",
+  "redis_adbc_go_module": "v0.0.0-20261115214919-225e00569986",
+  "go_version": "go version go1.27.3 darwin/arm64",
+  "binary_sha256": "34e776682b8c97157cabd4a380cd832a351adc17be8de37fd9129453f411adf3"
+}

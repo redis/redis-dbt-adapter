@@ -1,0 +1,26 @@
+warning: patch `arrow-flight v58.4.0 (https://github.com/sdf-labs/arrow-rs?rev=4419807fa617c6f4d9c7ab5d86c9ae94c4b9b854#4419807f)` was not used in the crate graph
+help: Check that the patched package version and available features are compatible
+      with the dependency requirements. If the patch has a different version from
+      what is locked in the Cargo.lock file, run `cargo update` to use the new
+      version. This may also occur with an optional dependency that is not enabled.
+warning: profile package spec `sdf-frontend` in profile `dev` did not match any packages
+   Compiling pbjson-types v0.8.0
+   Compiling time-tz v2.0.0
+   Compiling dbt-auth v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-auth)
+   Compiling proto-rust v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/proto-rust)
+   Compiling minijinja-contrib v2.5.0 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-jinja/minijinja-contrib)
+   Compiling dbt-jinja-vars v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-jinja-vars)
+   Compiling dbt-common v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-common)
+   Compiling dbt-schema-store v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-schema-store)
+   Compiling dbt-schemas v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-schemas)
+   Compiling dbt-adapter-engine v2.0.11 (/private/tmp/redis-dbt-issue51-engine/crates/dbt-adapter-engine)
+    Finished `test` profile [unoptimized] target(s) in 24.13s
+     Running unittests src/lib.rs (/tmp/redis-dbt-issue40-engine/target/debug/deps/dbt_adapter_engine-017ba28cfea34ce4)
+
+running 3 tests
+test retry::redis::tests::unknown_outcomes_and_other_statuses_are_not_replayed ... ok
+test retry::redis::tests::flight_retries_only_the_exact_redis_refusal_envelope ... ok
+test retry::redis::tests::retries_only_an_explicit_refused_publication ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 128 filtered out; finished in 0.05s
+
