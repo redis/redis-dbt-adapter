@@ -19,7 +19,7 @@ instructions. Check out the merged pin in a clean engine repository, then build:
 
 ```sh
 cd /path/to/dbt-engine
-git checkout 3f285a37312c6ccab44a16b71d831c49e35417bd
+git checkout 1988196900588c1be955b7b0cc87cd956fa47539
 cargo build -p dbt-sa-cli
 ```
 
@@ -30,8 +30,11 @@ dependencies and does not change engine macros. The actual engine source was sub
 [engine PR #4](https://github.com/alberttwong/dbt/pull/4) at
 `667707f32b746359d74affa477144418ed2a0179`, stacked on the pinned Redis
 branch, and merged as `3f285a37312c6ccab44a16b71d831c49e35417bd`.
-The global integration pin now selects that merged commit. Its entire Git tree
-is identical to the qualified source commit `667707f32b746359d74affa477144418ed2a0179`.
+The integration pin selects `1988196900588c1be955b7b0cc87cd956fa47539`, which adds
+the public auth-verification Markdown correction from
+[engine PR #5](https://github.com/alberttwong/dbt/pull/5). Its runtime sources are
+unchanged from the qualified Flight implementation; the only differences from
+`3f285a37312c6ccab44a16b71d831c49e35417bd` are the auth README and AGENTS guidance.
 `apply_engine_patch.py` verifies the clean merged checkout without modifying it;
 it still supports the historical patch base recorded in `upstream.json` for
 reproduction. Automated validation does not establish human auth verification.

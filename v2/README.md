@@ -40,12 +40,15 @@ metadata, and SQL execution support is in
 coverage is in [engine PR #3](https://github.com/alberttwong/dbt/pull/3).
 The current pin adds Flight SQL through merged
 [engine PR #4](https://github.com/alberttwong/dbt/pull/4).
+It includes the public auth-verification documentation correction from
+[engine PR #5](https://github.com/alberttwong/dbt/pull/5); that follow-up changes
+Markdown only.
 
 ```sh
 git clone https://github.com/alberttwong/dbt.git redis-dbt-engine
 cd redis-dbt-engine
 git remote add upstream https://github.com/dbt-labs/dbt.git
-git checkout 3f285a37312c6ccab44a16b71d831c49e35417bd
+git checkout 1988196900588c1be955b7b0cc87cd956fa47539
 # Requires the checkout's Rust toolchain, a C/C++ toolchain, and protoc.
 cargo build -p dbt-sa-cli
 # Executable: target/debug/dbt
