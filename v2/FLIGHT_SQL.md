@@ -105,6 +105,10 @@ pre-fix driver revision. The compatibility lookup remains for older drivers.
 
 ## Reproduce qualification
 
+For focused auth/profile review of an engine under development, use the
+[public auth verification guide](AUTH_VERIFICATION.md). Its probes do not
+require the checkout's HEAD to equal this integration's immutable engine pin.
+
 Provision and independently verify the dedicated Enterprise backend first;
 export its `REDIS_URI`, `REDIS_USERNAME`, `REDIS_PASSWORD`, and
 `REDIS_TLS_CA_FILE`. Export separate `FLIGHT_SQL_USERNAME`,
@@ -182,8 +186,9 @@ CLI interruption, nor measure all server memory, Search cursors, or file handles
   [new evidence](../docs/validation/issues70-71-2026-11-16.md).
   Broader native cancellation/resource coverage remains part of
   [#51](https://github.com/redis/redis-dbt-adapter/issues/51). The missing public
-  auth live-test instructions are tracked in
-  [#74](https://github.com/redis/redis-dbt-adapter/issues/74); automated probes
+  auth live-test suite is replaced in the public instructions by the runnable
+  [auth verification guide](AUTH_VERIFICATION.md), correcting
+  [#74](https://github.com/redis/redis-dbt-adapter/issues/74). Automated probes
   do not establish that a human ran a live-test suite. The reproduced
   optional-runtime failure and merged fix are recorded in closed
   [#71](https://github.com/redis/redis-dbt-adapter/issues/71).

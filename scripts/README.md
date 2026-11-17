@@ -48,13 +48,24 @@ untrusted certificates, missing authentication, and incorrect passwords.
 with the same name owned by another checkout. Existing unrelated Enterprise
 containers are left alone.
 
-To stop the fixture without deleting its state:
+## Restarting the fixture
+
+To stop the fixture:
 
 ```sh
 docker stop redis-dbt-enterprise
 ```
 
-To reset the fixture, including expired certificates, first remove its owned
+Run `up` again to reuse the fixture if its cluster state and certificate survive.
+The `verified-api` marker does not guarantee that a restarted container retained
+them. If management TLS no longer trusts the saved CA, `up` fails immediately
+with reset instructions. It does not retry with certificate verification disabled
+or send credentials over an unverified connection to recover an initialized fixture.
+Temporary connection failures while services start still retry normally.
+
+## Resetting the fixture
+
+To reset a stale fixture, including expired certificates, first remove its owned
 container (`docker rm -f redis-dbt-enterprise`), then remove `.redis-enterprise/`
 and rerun `up`. This deletes the fixture's test data and generated credentials.
 

@@ -54,6 +54,9 @@ cargo build -p dbt-sa-cli
 Read that checkout's `AGENTS.md`, `.agents/adapters.md`, and `CONTRIBUTING.md`
 before making engine changes. Its architecture has evolved from some paths in
 the public adapter guide; use the pinned source as the implementation reference.
+For auth/profile changes, the [public verification guide](AUTH_VERIFICATION.md)
+provides runnable native Redis and Flight probes and the human review record;
+the public engine fork does not contain a `dbt-auth-tests` crate.
 
 The integration work is tracked in
 [issue #27](https://github.com/redis/redis-dbt-adapter/issues/27).

@@ -79,6 +79,21 @@ class API:
             raise APIError(method, path, code) from None
 
 
+def bootstrap_state(api, *, verified):
+    try:
+        return api.call('GET', 'bootstrap')['bootstrap_status']['state']
+    except (ssl.SSLCertVerificationError, urllib.error.URLError) as error:
+        reason = getattr(error, 'reason', error)
+        if verified and isinstance(reason, ssl.SSLCertVerificationError):
+            raise RuntimeError(
+                'The owned Enterprise fixture no longer trusts its saved management CA. '
+                'Its container and local state may no longer match, or its certificate may have expired. '
+                'Reset the dedicated fixture using scripts/README.md#resetting-the-fixture, '
+                'then rerun up. Certificate verification remains enabled.'
+            ) from None
+        raise
+
+
 def certificates():
     if (STATE / 'server.crt').exists():
         return
@@ -239,11 +254,12 @@ def up(github_env=False):
                 '-p', f'127.0.0.1:{API_PORT}:9443', IMAGE)
     print('Waiting for dedicated Enterprise cluster...', flush=True)
     # Only the owned, loopback bootstrap endpoint uses its initial self-signed cert.
-    bootstrap_api = API(credentials, verified=(STATE / 'verified-api').exists())
+    verified = (STATE / 'verified-api').exists()
+    bootstrap_api = API(credentials, verified=verified)
     requested = False
     def bootstrapped():
         nonlocal requested
-        state = bootstrap_api.call('GET', 'bootstrap')['bootstrap_status']['state']
+        state = bootstrap_state(bootstrap_api, verified=verified)
         if state == 'failed':
             raise RuntimeError('Enterprise bootstrap failed')
         if state == 'idle' and not requested:
