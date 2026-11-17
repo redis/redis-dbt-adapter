@@ -269,7 +269,7 @@ not the adapter. For example:
 - relations render as `schema.table`.
 
 Skipped, with the reason in the test:
-- general SQL privileges and materialized views
+- general SQL privileges
 - zero-copy `dbt clone` (dbt clone creates views)
 - arrays
 - incremental Python models (Python models are tables)
@@ -345,6 +345,67 @@ materializations, so the adapter covers what isn't SQL:
 | Cross-database macros | dbt-core's defaults work natively except two: `safe_cast` uses the driver's `TRY_CAST`, and `listagg` with `limit_num` raises a clear error (it needs arrays). `tests/assert_cross_db_macros.sql` checks them all |
 | Model contracts | An enforced contract creates the table from its DDL, then inserts the rows (as on dbt-postgres). `not_null` and `check` are enforced by the driver; `primary_key`, `unique` and `foreign_key` are accepted but not enforced (dbt warns) |
 | Small dialect bits | `?` bind parameters, `CURRENT_TIMESTAMP` (and `current_timestamp_in_utc_backcompat` in UTC, which dbt's default isn't in a non-UTC session), `validate_sql` with a query that can't return rows (the driver has no `EXPLAIN`), a subquery wrapper for `dbt show --limit`, and no alias on the subqueries `--empty` and microbatch put around refs, so a model's own alias (`from {{ ref('x') }} z`) still works |
+
+### Materialized views
+
+SQL models can use the native ADBC materialized-view lifecycle:
+
+```sql
+{{ config(
+    materialized='materialized_view',
+    indexes=[{'columns': ['customer_id'], 'type': 'btree'}],
+    on_configuration_change='apply'
+) }}
+select customer_id, sum(amount) as amount
+from {{ ref('orders') }}
+group by customer_id
+```
+
+- The first build creates a populated native materialized view. Subsequent
+  `dbt run` / `dbt build` commands refresh its **stored query** from current sources.
+- Changes to the model SQL require `--full-refresh`. It builds and indexes an
+  intermediate materialized view before renaming the old target to a backup,
+  publishing the new name, and dropping the backup. Switching to/from `table`
+  or `view` uses the corresponding native relation type.
+- `indexes` accepts a list of dictionaries with `columns` (exact column names),
+  optional `type` (`btree` or `hash`, Redis Search compatibility hints), and
+  optional `unique: false`. UNIQUE, expression, and partial indexes are rejected.
+  Multiple indexes and quoted mixed-case column names are supported. The
+  current driver rejects index columns containing spaces; see
+  [driver #449](https://github.com/redis/redis-adbc-driver/issues/449).
+- Index configuration changes use `on_configuration_change`: `apply` (default)
+  adds/removes the materialization's named indexes and refreshes; `continue`
+  warns and skips the model; `fail` errors before model DDL. Full refresh always
+  uses the current configuration. External named indexes are preserved on
+  refresh; replacement drops the old relation and its indexes.
+- Hooks, grants warnings, and `persist_docs` work as for other SQL models.
+  Discovery and the dbt cache use `materialized_view`; the docs catalog reports
+  `MATERIALIZED VIEW`. Interrupted runs may leave intermediates/backups, which
+  the next build cleans up using their discovered types.
+
+The native driver SQL was introduced in **v0.0.20**; the materialized-view lifecycle is validated
+with **v0.0.27**. The previous example pin, v0.0.18, does not support these
+statements. v0.0.23+ uses storage protocol 17 and rejects earlier driver catalogs;
+use a fresh isolated driver database or a driver-supported import path when
+upgrading. Replacing the library alone does not migrate existing data. Upgrade
+all clients accessing materialized views together.
+
+The adapter emits plain `REFRESH MATERIALIZED VIEW`; it does not expose
+`CONCURRENTLY` or `WITH NO DATA`. Refresh/build failures preserve the prior
+published target, but the rename sequence and index changes are separate
+committed statements. These options do not claim PostgreSQL transaction or
+uninterrupted concurrent-reader semantics, or direct dbt-postgres wire-protocol
+compatibility. Driver reader-consistency work is tracked separately in
+[driver issue #105](https://github.com/redis/redis-adbc-driver/issues/105).
+
+The original qualification on adapter base `2f686af` encountered v0.0.27
+catalog-publication conflicts; see
+[driver #448](https://github.com/redis/redis-adbc-driver/issues/448). The adapter
+now includes safe publication retries. The validation record distinguishes
+the original results from checks after integration with current `main`.
+
+See [recorded validation](MATERIALIZED_VIEW_VALIDATION.md) for the native dbt
+build, test, catalog, and failure-recovery results on Redis Software with 4× QPF.
 
 ### Package compatibility
 
@@ -490,8 +551,9 @@ the dbt features above all work. These limits come from the design:
   be incremental: dbt's incremental materialization runs only SQL models,
   and says so. dbt runs `dbt show` and unit tests of a Python model as SQL,
   so neither works on any adapter.
-- **No materialized views.** `materialized='materialized_view'` stops with
-  a clear error.
+- **Materialized-view consistency follows the driver.** Refresh and replacement
+  autocommit. No PostgreSQL multi-statement transaction or uninterrupted
+  concurrent-reader guarantee is implied. See [materialized views](#materialized-views).
 - **Limited grants.** Opt-in native SELECT grants require a driver with enforced
   RBAC support and provisioned dedicated Redis Software ACLs. Other privileges,
   view grants and Flight SQL grants are unsupported. Without configuration,
