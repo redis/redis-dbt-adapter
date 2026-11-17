@@ -21,6 +21,12 @@
     Unconfigured profiles retain the historical warning; no SQL is sent. -#}
 {% macro redis_adbc__apply_grants(relation, grant_config, should_revoke=True) -%}
   {%- if adapter.rbac_grants_enabled() -%}
+    {%- if not relation.is_table -%}
+      {%- if grant_config -%}
+        {{ exceptions.raise_compiler_error("Redis RBAC SELECT grants require a permanent base table; view and materialized-view grants are unsupported") }}
+      {%- endif -%}
+      {{ return(none) }}
+    {%- endif -%}
     {%- set select_grants = {} -%}
     {%- for privilege, grantees in (grant_config or {}).items() -%}
       {%- if privilege | lower != 'select' -%}

@@ -1,5 +1,10 @@
 # dbt v1 Flight SQL validation
 
+The [remaining contract coverage record](SKIP_COVERAGE_VALIDATION.md) adds the
+three required Flight functional cases and plaintext rejection, with 227 full-suite
+passes and four native-only skips against the public pinned server and freshly
+built driver main `640dbf1`, with earlier stable v0.0.27 results retained. Historical results below retain their original scope.
+
 The [November 16 authenticated TLS qualification](../docs/validation/issue40-2026-11-16.md)
 adds immutable source/driver identities, independently verified backend topology,
 5 security/session probes and 192 functional passes (26 skipped, no warnings).

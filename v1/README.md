@@ -271,12 +271,13 @@ not the adapter. For example:
 - dates are ISO, not `'09/01/2023'`;
 - relations render as `schema.table`.
 
-Skipped, with the reason in the test:
-- general SQL privileges
-- zero-copy `dbt clone` (dbt clone creates views)
-- incremental Python models (Python models are tables)
-- backslash escapes (standard SQL strings, as dbt-postgres skips)
-- `get_catalog_for_single_relation`, which dbt-core never calls
+Transport-specific checks run in separate jobs. A native-only functional run
+skips the Flight SQL module; the authenticated Flight job executes those cases.
+General grants fixtures are replaced by a dedicated native SELECT contract suite
+with provisioned reader roles and ACLs. Clone fallback/state validation, Python
+incremental models, string semantics and the single-relation catalog API now run
+as ordinary tests. Native zero-copy cloning remains false and has active
+capability/fallback coverage. See [the contract coverage record](SKIP_COVERAGE_VALIDATION.md).
 
 The latest released driver supports all snapshot tests, including `dbt_valid_to_current`
 with `date(x)`; these run as ordinary tests so regressions fail CI.
@@ -344,7 +345,7 @@ materializations, so the adapter covers what isn't SQL:
 | Incremental strategies | `append`, `delete+insert` (the default with a `unique_key`), `merge`, and `microbatch` (each batch replaces its `event_time` window; batches can run in parallel) |
 | Seed reloads | A reload without `--full-refresh` checks the CSV's columns before truncating, so a mismatch leaves the table as it was (there's no transaction to roll the `TRUNCATE` back) |
 | Loading | Seeds and the raw CSV go through Arrow bulk ingest, which is much faster than INSERTs. The driver converts each seed value to its column's type as an INSERT would, and supplies the Arrow type for each of the raw CSV's SQL column types |
-| Python models | Run in the dbt process, as dbt-duckdb runs them: Redis has no Python runtime, but the driver evaluates most SQL in the dbt process too. `dbt.ref()` and `dbt.source()` return a `pyarrow.Table` (`select * from …`, read with `fetch_arrow_table()`); `session` is the thread's ADBC DB-API connection, for running SQL. `model()` returns a pyarrow Table or RecordBatchReader, a pandas or polars DataFrame (a pandas index is dropped), or anything with the Arrow stream interface; it's bulk-ingested into the `__dbt_tmp` table, and dbt's rename swap finishes the job. The adapter's `table` materialization is dbt's, with Python added; tracebacks give the model file's line numbers. As dbt specifies, `--empty` and `--sample` don't limit a Python model's refs (sources are) |
+| Python models | Run in the dbt process, as dbt-duckdb runs them: Redis has no Python runtime, but the driver evaluates most SQL in the dbt process too. `dbt.ref()` and `dbt.source()` return a `pyarrow.Table` (`select * from …`, read with `fetch_arrow_table()`); `session` is the thread's ADBC DB-API connection, for running SQL. `model()` returns a pyarrow Table or RecordBatchReader, a pandas or polars DataFrame (a pandas index is dropped), or anything with the Arrow stream interface; it's bulk-ingested into the `__dbt_tmp` table, and dbt's rename swap finishes the job. Table builds use dbt's rename swap; Python incremental builds stage Arrow once and apply append, delete+insert or merge, with `--full-refresh` replacing the target; tracebacks give the model file's line numbers. As dbt specifies, `--empty` and `--sample` don't limit a Python model's refs (sources are) |
 | Cross-database macros | dbt-core's defaults work natively except two: `safe_cast` uses the driver's `TRY_CAST`, and `listagg` with `limit_num` raises a clear error (the adapter has no translation for dbt's `ARRAY_SLICE` form). `tests/assert_cross_db_macros.sql` checks them all |
 | Model contracts | An enforced contract creates the table from its DDL, then inserts the rows (as on dbt-postgres). `not_null` and `check` are enforced by the driver; `primary_key`, `unique` and `foreign_key` are accepted but not enforced (dbt warns) |
 | Small dialect bits | `?` bind parameters, `CURRENT_TIMESTAMP` (and `current_timestamp_in_utc_backcompat` in UTC, which dbt's default isn't in a non-UTC session), `validate_sql` with a query that can't return rows (the driver has no `EXPLAIN`), a subquery wrapper for `dbt show --limit`, and no alias on the subqueries `--empty` and microbatch put around refs, so a model's own alias (`from {{ ref('x') }} z`) still works |
@@ -551,10 +552,10 @@ the dbt features above all work. These limits come from the design:
   live target until the same batch is rerun; there is no rollback. Run
   `make microbatch-failure-demo` to observe this with an independent reader
   and verify recovery without duplicates.
-- **Python models are tables, and run in the dbt process.** Each ref a
-  Python model reads is loaded whole into dbt's memory. Python models can't
-  be incremental: dbt's incremental materialization runs only SQL models,
-  and says so. dbt runs `dbt show` and unit tests of a Python model as SQL,
+- **Python models run in the dbt process.** Each ref a
+  Python model reads is loaded whole into dbt's memory. Python incremental models support append, delete+insert and merge through
+  Arrow staging; Python microbatch and enforced incremental contracts remain
+  unsupported. dbt runs `dbt show` and unit tests of a Python model as SQL,
   so neither works on any adapter.
 - **Materialized-view consistency follows the driver.** Refresh and replacement
   autocommit. No PostgreSQL multi-statement transaction or uninterrupted

@@ -280,6 +280,13 @@ jobs:
       - name: make adapter-tests
         run: make adapter-tests
 
+      - name: Native SELECT grants with dedicated roles and ACLs
+        env:
+          REDIS_REQUIRE_RBAC_TESTS: '1'
+          GH_TOKEN: ${{ github.token }}
+          REDIS_ADBC_DRIVER: ${{ github.workspace }}/v1/driver/libadbc_driver_redis.so
+        run: uv run pytest adapter/tests/integration/test_native_select_contract.py -q
+
       - name: Upload the dbt logs
         if: failure()
         uses: actions/upload-artifact@v7

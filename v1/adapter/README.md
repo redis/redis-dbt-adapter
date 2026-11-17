@@ -166,7 +166,22 @@ actual native ADBC run results.
   generic transport failures are not replayed.
 - Native SELECT grants can opt into dedicated Redis Software ACLs; see [SQL grants](../README.md#sql-grants-through-dedicated-redis-software-acls).
 - Python models run in the dbt process and load their inputs into its memory;
-  incremental Python models are not supported
+  incremental Python models support append, delete+insert and merge through Arrow staging
+
+Python models may set `materialized='incremental'` and use `dbt.is_incremental`
+to filter their Arrow input. Supported strategies are `append`, `delete+insert`
+and `merge`; merge requires `unique_key`. The default uses delete+insert with a
+key and append otherwise. Python executes once into a permanent intermediate
+relation, then native SQL applies the rows. Full refresh builds a replacement
+first. Standard schema-change options, hooks, docs, grants and initial/full-refresh
+indexes are preserved. Python microbatch and enforced incremental contracts are
+rejected. Every statement autocommits; arbitrary Python/session side effects are
+not rolled back or automatically replayed. `dbt.ref()` still loads its result
+into the dbt process's memory.
+
+The single-relation catalog API is implemented, and clone state/self-target
+checks use the view fallback without advertising native zero-copy cloning.
+See the [coverage and validation record](../SKIP_COVERAGE_VALIDATION.md).
 
 Materialized-view reruns refresh the stored query; SQL definition changes require
 `--full-refresh`. Nonunique `indexes` and `on_configuration_change` are supported;

@@ -1,6 +1,7 @@
 """dbt's cross-database macros and data type macros."""
 
 import pytest
+from dbt.tests.util import run_dbt
 
 from dbt.tests.adapter.utils import fixture_date_spine, fixture_get_intervals_between, fixture_listagg
 
@@ -110,9 +111,26 @@ class TestEscapeSingleQuotesQuote(BaseEscapeSingleQuotesQuote):
     pass
 
 
-@pytest.mark.skip(reason="standard SQL strings: a backslash is literal, as on Postgres (dbt-postgres skips it too)")
 class TestEscapeSingleQuotesBackslash(BaseEscapeSingleQuotesBackslash):
-    pass
+    @pytest.fixture(scope="class")
+    def models(self):
+        # Plain SQL strings double quotes; backslashes stay literal. E strings
+        # opt into escape processing. Do not change the driver's plain literals.
+        return {"strings.sql": r"""
+select '{{ escape_single_quotes("they're") }}' as actual,
+       'they''re' as expected,
+       E'they\'re' as escaped,
+       '{{ escape_single_quotes("path\\file's") }}' as mixed,
+       'path\file''s' as mixed_expected,
+       '{{ escape_single_quotes("") }}' as empty
+"""}
+
+    def test_build_assert_equal(self, project):
+        run_dbt(["build"])
+        row = project.run_sql(f"select * from {project.test_schema}.strings", fetch="one")
+        assert tuple(row) == ("they're", "they're", "they're", "path\\file's", "path\\file's", "")
+        lengths = project.run_sql(f"select length(actual), length(mixed), length(empty) from {project.test_schema}.strings", fetch="one")
+        assert tuple(lengths) == (7, 11, 0)
 
 
 class TestExcept(BaseExcept):
