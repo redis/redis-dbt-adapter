@@ -25,6 +25,13 @@ The published Python package supports dbt Core 1.10 and later 1.x releases.
 This repository keeps dbt v1 and v2 work together, with separate dependencies,
 projects, and test resources.
 
+One project goal is to create and contribute a native Redis adapter for dbt v2,
+following the [dbt v2 adapter creation guide](https://docs.getdbt.com/guides/adapter-creation-v2?step=1&version=2).
+That work integrates Redis into the shared Rust engine through the Redis ADBC
+driver. The experimental engine fork is a milestone toward upstream inclusion;
+see the [contribution status and remaining work](docs/integration-status.md#dbt-v2-upstream-contribution)
+for progress toward that goal.
+
 | Directory | Purpose | Status |
 | --- | --- | --- |
 | [`v1/`](v1/README.md) | Python `dbt-redis-adbc` adapter, NYC taxi example, driver tooling, and functional tests | Supports dbt Core 1.10 and later 1.x releases; the example requires 1.10.8+ |
